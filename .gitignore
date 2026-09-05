@@ -1,0 +1,34 @@
+# Media, not source.
+#
+# The video tooling writes its .avi wherever it is run, and anyone
+# converting by hand leaves the downloaded original there too. These run
+# about 50 MB per minute - a single four-minute clip is larger than this
+# entire repository - and they are usually somebody else's copyrighted
+# work besides.
+#
+# Matched by extension rather than by "*", so the scripts and the
+# documentation stay tracked without needing negation rules - which,
+# with "last match wins", are how an ignore file quietly stops working.
+
+# what the clock plays
+*.avi
+
+# what yt-dlp leaves behind: the source, and its interrupted downloads
+*.webm
+*.mp4
+*.mkv
+*.m4a
+*.opus
+*.part
+*.ytdl
+
+# Firmware images. They belong on a release, not in git history, where
+# a two-megabyte binary per version would live forever. flash.sh
+# downloads them.
+*.bin
+SHA256SUMS
+
+# editors / os
+.vscode/
+*.swp
+.DS_Store

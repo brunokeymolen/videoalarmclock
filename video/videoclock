@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+#
+# videoclock - put a video on the clock: convert it, and upload it.
+#
+#   ./videoclock <video-file|youtube-url> <name.avi> [clock-ip]
+#
+#   ./videoclock holiday.mov            wakeup.avi
+#   ./videoclock ~/Videos/sunrise.mp4   sunrise.avi 192.168.0.201
+#   ./videoclock "https://youtu.be/PIb6AZdTr-A" clg308.avi 192.168.0.201
+#
+#   ./videoclock --update      rebuild with a current yt-dlp
+#
+# A file on disk is the general case, and anything ffmpeg can read
+# works. A YouTube URL is a convenience on top of it: the same
+# conversion with a download in front. Which one you meant is decided by
+# whether the first argument names a file that exists.
+#
+# Trim a long source before converting - these files run about 50 MB per
+# minute, so this is usually what you want:
+#
+#   START=00:01:30 DURATION=00:00:45 ./videoclock in.mp4 clip.avi
+#
+# A thin wrapper around the container in this directory: it builds the
+# image the first time, then runs the conversion inside it with the
+# current directory mounted, so the .avi lands where you are standing.
+#
+# WITH A CLOCK ADDRESS, THE CLOCK'S MEDIA SCREEN MUST BE OPEN - on the
+# device, gear icon -> Media. It runs its FTP server only while that
+# screen is up, and leaving it stops a transfer in progress.
+set -euo pipefail
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+IMAGE="${VIDEOCLOCK_IMAGE:-videoalarmclock-video}"
+
+die() { printf 'videoclock: %s\n' "$*" >&2; exit 1; }
+
+command -v docker >/dev/null 2>&1 || die "docker is not installed.
+
+   Without it, install ffmpeg (and yt-dlp, for YouTube) yourself and run
+   ./file2clock.sh or ./yt2clock.sh directly - see README.md."
+
+docker info >/dev/null 2>&1 || die "docker is installed but not usable.
+   Is the daemon running, and is your user in the 'docker' group?"
+
+if [ "${1:-}" = "--update" ]; then
+    echo "==> rebuilding with a current yt-dlp"
+    docker build --no-cache -t "$IMAGE" "$HERE"
+    exit 0
+fi
+
+if [ $# -lt 2 ] || [ $# -gt 3 ]; then
+    sed -n '3,21p' "$0" | sed 's/^#\ \?//'
+    exit 2
+fi
+
+if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
+    echo "==> building the image (once; a few minutes)"
+    docker build -t "$IMAGE" "$HERE"
+fi
+
+# ------------------------------------------------------ which script --
+#
+# A file that exists wins over any URL-shaped reading of the same
+# string. That way a local file awkwardly named "https:..." still works,
+# and - more usefully - a typo in a path becomes "not a file, and not a
+# URL" here rather than a puzzling extraction failure from yt-dlp.
+
+SOURCE="$1"
+MOUNTS=()
+
+if [ -e "$SOURCE" ]; then
+    SCRIPT=/usr/local/bin/file2clock.sh
+    [ -f "$SOURCE" ] || die "'$SOURCE' is not a regular file"
+
+    # The container sees the current directory at /out. A source
+    # somewhere else - ~/Videos, an external disk - is not visible
+    # there, so its directory is mounted read-only at /in and the
+    # argument rewritten to match.
+    SRC_DIR="$(cd "$(dirname "$SOURCE")" && pwd)"
+    SRC_FILE="$(basename "$SOURCE")"
+
+    if [ "$SRC_DIR" = "$PWD" ]; then
+        set -- "$SRC_FILE" "${@:2}"
+    else
+        MOUNTS=(-v "$SRC_DIR:/in:ro")
+        set -- "/in/$SRC_FILE" "${@:2}"
+    fi
+else
+    SCRIPT=/usr/local/bin/yt2clock.sh
+    case "$SOURCE" in
+        http://*|https://*) ;;
+        *) die "'$SOURCE' is not a file that exists, and is not a URL" ;;
+    esac
+fi
+
+# ------------------------------------------------------------- run it --
+#
+# --user so the .avi belongs to whoever ran this rather than to root.
+# HOME is redirected because yt-dlp writes a cache there and the host
+# home is not mounted.
+#
+# Default bridge networking, deliberately: outbound is all that is
+# needed - curl uses passive FTP, so the container opens both
+# connections to the clock - and --network host would not work on macOS.
+#
+# -t only when there is a terminal to attach. Docker refuses it
+# otherwise ("the input device is not a TTY"), which would make this
+# unusable from a script or a cron job for the sake of a progress bar.
+TTY_ARGS=()
+[ -t 0 ] && TTY_ARGS=(-t)
+
+exec docker run --rm -i "${TTY_ARGS[@]}" \
+    --user "$(id -u):$(id -g)" \
+    -e HOME=/tmp \
+    -e "START=${START:-}" \
+    -e "DURATION=${DURATION:-}" \
+    -v "$PWD:/out" \
+    "${MOUNTS[@]}" \
+    "$IMAGE" "$SCRIPT" "$@"
