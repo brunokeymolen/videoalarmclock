@@ -40,7 +40,9 @@ once.
 
 **On your computer**
 
-- Linux or macOS.
+- Linux or macOS for the firmware install below. Converting video also
+  works on **Windows**, with Docker Desktop — step by step in
+  [`video/README.md`](video/README.md#on-windows-step-by-step).
 - `esptool`, for the one-time install: `pip install --user esptool`
 - Docker, if you want the video container. Otherwise `ffmpeg` directly,
   plus `yt-dlp` only if you want the YouTube shortcut — see
@@ -140,6 +142,11 @@ the top. **That screen must be open while you upload** — see below.
 
 Without the address it just leaves `wakeup.avi` in the current
 directory, and you copy it to `/clock` on the card yourself.
+
+On **Windows** the `videoclock` wrapper does not run; you install Docker
+Desktop and call the container directly, which is written out step by
+step in
+[`video/README.md`](video/README.md#on-windows-step-by-step).
 
 Full details, including running without Docker:
 [`video/README.md`](video/README.md).

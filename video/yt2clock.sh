@@ -82,24 +82,66 @@ WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
 #
-# YouTube needs a JavaScript runtime to work out the download URLs, and
-# yt-dlp enables only Deno by default. With Node installed but not Deno,
-# extraction fails with a warning about runtimes followed by a flat
-# "This video is not available" - which reads like the video is gone
-# rather than like a missing dependency, and cost an afternoon once.
+# YouTube computes its download URLs in JavaScript, so yt-dlp has to run
+# some - and it is strict about what it will run: Deno >= 2.3.0,
+# Node >= 22.0.0, or Bun >= 1.2.11. An older one is not a runtime that
+# might work, it is discarded. Extraction then falls back to a path that
+# no longer functions and reports a flat "This video is not available",
+# which reads like the video has been deleted rather than like a runtime
+# too old to use. Debian's nodejs package is v18 and fails in exactly
+# that way, which cost an afternoon once.
 #
-# So: use Deno if it is there, otherwise tell yt-dlp about Node.
+# So: find one that is new enough, name it to yt-dlp unless it is Deno
+# (the only one enabled by default), and if what is here is merely too
+# old, say so rather than letting YouTube take the blame.
 #
+
+# ver_ge HAVE WANT - dotted numeric versions, true when HAVE >= WANT.
+ver_ge() {
+    local IFS=. i x y
+    local -a a=($1) b=($2)
+    for i in 0 1 2; do
+        x=${a[i]:-0}; x=${x%%[!0-9]*}
+        y=${b[i]:-0}; y=${y%%[!0-9]*}
+        (( 10#${x:-0} > 10#${y:-0} )) && return 0
+        (( 10#${x:-0} < 10#${y:-0} )) && return 1
+    done
+    return 0
+}
+
 JS_ARGS=()
-if command -v deno >/dev/null 2>&1; then
-    :
-elif command -v node >/dev/null 2>&1; then
-    JS_ARGS=(--js-runtimes node)
-elif command -v bun >/dev/null 2>&1; then
-    JS_ARGS=(--js-runtimes bun)
-else
-    echo "yt2clock: no JavaScript runtime (deno, node or bun) - YouTube" >&2
-    echo "          downloads will probably fail. See README.md." >&2
+JS_RUNTIME=""
+JS_TOO_OLD=()
+
+for candidate in deno:2.3.0 node:22.0.0 bun:1.2.11; do
+    name=${candidate%%:*}
+    need=${candidate#*:}
+
+    command -v "$name" >/dev/null 2>&1 || continue
+
+    # deno says "deno 2.9.6 (stable, ...)", node "v22.1.0", bun "1.2.11"
+    have=$("$name" --version 2>/dev/null | head -1 \
+           | grep -Eo '[0-9]+(\.[0-9]+)+' | head -1)
+
+    if ver_ge "${have:-0}" "$need"; then
+        [ "$name" = deno ] || JS_ARGS=(--js-runtimes "$name")
+        JS_RUNTIME="$name ${have:-?}"
+        break
+    fi
+
+    JS_TOO_OLD+=("$name ${have:-?}, and yt-dlp needs $need or newer")
+done
+
+if [ -z "$JS_RUNTIME" ]; then
+    echo "yt2clock: no JavaScript runtime that yt-dlp will use." >&2
+    for stale in ${JS_TOO_OLD+"${JS_TOO_OLD[@]}"}; do
+        echo "          found $stale" >&2
+    done
+    echo "          The download will probably fail, and it will say" >&2
+    echo "          'This video is not available' rather than saying" >&2
+    echo "          this. Install Deno:" >&2
+    echo "              curl -fsSL https://deno.land/install.sh | sh" >&2
+    echo "          See README.md." >&2
 fi
 
 echo "==> downloading"
