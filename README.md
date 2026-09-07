@@ -181,7 +181,7 @@ The clock's address is shown on its **gear → Media** screen, in blue at
 the top. **That screen must be open while you upload** — see below.
 
 Without the address it just leaves `wakeup.avi` in the current
-directory, and you copy it to `/clock` on the card yourself.
+directory, and you copy it on the card yourself.
 
 On **Windows** the `videoclock` wrapper does not run; you install Docker
 Desktop and call the container directly, which is written out step by
@@ -212,7 +212,7 @@ Leave that screen and the server stops, mid-transfer if necessary.
 There is no username or password. FTP sends credentials in clear text,
 so a password would be theatre rather than protection; what limits the
 exposure is time, and opening that screen is a deliberate act at the
-device. A client still cannot escape the media directory.
+device.
 
 ## 4. Set an alarm
 
