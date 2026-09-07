@@ -1,13 +1,9 @@
 <p align="center">
-  <img src="img/e.jpg" alt="Video Alarm Clock outer view" width="135">
+  <img src="img/c.jpg" alt="Video Alarm Clock side view" width="180">
   &nbsp;&nbsp;
-  <img src="img/c.jpg" alt="Video Alarm Clock side view" width="160">
+  <img src="img/d.jpg" alt="Video Alarm Clock" width="250">
   &nbsp;&nbsp;
-  <img src="img/a.png" alt="Video Alarm Clock" width="250">
-  &nbsp;&nbsp;
-  <img src="img/b.jpg" alt="Video Alarm Clock detail view" width="160">
-  &nbsp;&nbsp;
-  <img src="img/d.jpg" alt="Video Alarm Clock outer view" width="135">
+  <img src="img/b.jpg" alt="Video Alarm Clock detail view" width="180">
 </p>
 
 <h1 align="center">Video Alarm Clock</h1>
