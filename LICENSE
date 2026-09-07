@@ -1,0 +1,72 @@
+Video Alarm Clock
+Copyright 2026 Bruno Keymolen
+
+Required Notice: Copyright 2026 Bruno Keymolen
+(https://github.com/brunokeymolen/videoalarmclock)
+
+
+WHAT THIS COVERS
+
+  These terms cover the firmware, the scripts and the documentation in
+  this repository - firmware/, video/, docs/, img/ and the files at the
+  top level - along with the released firmware images they install.
+
+  They do NOT cover enclosure/. The printable stand and its OpenSCAD
+  source are dedicated to the public domain under CC0 1.0; see
+  enclosure/LICENSE. Print it, change it, sell it, no permission needed.
+
+
+NONCOMMERCIAL LICENSE
+
+  Anyone may use, copy, install, run, study and modify this software
+  and documentation for any noncommercial purpose.
+
+  You may share original or modified copies for noncommercial purposes,
+  as long as you include this license and the Required Notice above with
+  the copy you share.
+
+  Commercial use is not allowed without a written agreement from Bruno
+  Keymolen first.
+
+  Commercial use includes, for example:
+
+    - selling this software or documentation;
+    - selling firmware images built from it;
+    - selling clocks, kits, devices or services that include it or depend
+      on it;
+    - using it to provide a paid service, operate a business, promote a
+      commercial product, or support commercial work.
+
+  If you want to use it commercially, ask first by opening an issue at
+  the address above. Permission is not automatically refused, but it must
+  be agreed in writing.
+
+
+INDEPENDENT RIGHTS
+
+  These terms do not limit rights you already have under copyright law,
+  such as fair use, quotation, private copying where allowed, or use of
+  material that is not protected by copyright.
+
+  These terms do not grant trademark rights, endorsement rights, or any
+  rights in third-party hardware, software, videos, names or services.
+
+
+NO WARRANTY
+
+  This project is provided as is, without warranty of any kind. To the
+  fullest extent allowed by law, the author is not liable for any claim,
+  damage, loss or other consequence arising from this project, from using
+  it, from modifying it, from flashing it to a device, or from any media
+  converted, uploaded, stored or played with it.
+
+  This is a hobby alarm clock project, not a certified or dependable
+  alarm system. Do not rely on it as your only alarm for anything that
+  matters.
+
+
+NO OTHER RIGHTS
+
+  Any use not allowed by these terms requires written permission from
+  Bruno Keymolen. The author may offer different license terms to other
+  people or organizations.

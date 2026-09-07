@@ -25,7 +25,7 @@ Video Alarm Clock runs on a [Waveshare ESP32-P4 touch display](https://www.waves
 videos from a microSD card. Flash it once, put it on Wi-Fi, add your
 media, and manage alarms from the device itself.
 
-This repository has **no source code**. It has the three things you need
+This repository has **the installation files and procedure**. It has the three things you need
 to own one:
 
 | Directory | What it gives you |
@@ -266,10 +266,23 @@ will not boot at all — `firmware/flash.sh` still works, and
 
 ## Licence and copyright
 
-The firmware, the scripts and the enclosure are © 2026 Bruno Keymolen.
+© 2026 Bruno Keymolen. The repository is under two licences.
 
-`video/` can download from YouTube, which may breach its terms of
-service, and the videos are usually somebody else's work. That part is a
-demo; the general case is a file you already have. These tools are for
-material you have the right to use — your own footage, public-domain
-film, or anything licensed for it. What you point them at is your call.
+**The stand is free, with no conditions at all.** [`enclosure/`](enclosure/)
+— the STL and the OpenSCAD source — is public domain under CC0 1.0
+([`enclosure/LICENSE`](enclosure/LICENSE)). Print it, change it, sell the
+prints. No permission and no credit needed.
+
+**Everything else is free for noncommercial use.** The firmware, the
+scripts and the documentation are under the custom noncommercial terms in
+[LICENSE](LICENSE). Install it, experiment, use it at home, change it,
+pass it on — all of that is permitted. Selling
+it, selling clocks with it on them, or running a business on it needs a
+written agreement first. Ask, by opening an issue; the answer is not
+automatically no.
+
+**There is no warranty, for the clock or for what you play on it.** It
+is a hobby project: do not rely on it as your only alarm for anything
+that matters, and deciding what you have the right to convert and play
+is your responsibility, not the author's. [`DISCLAIMER.md`](DISCLAIMER.md)
+sets that out properly and is worth the two minutes.

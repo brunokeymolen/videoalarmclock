@@ -448,3 +448,7 @@ Downloading from YouTube may breach its terms of service, and the videos
 are usually somebody else's work. This script is for material you have
 the right to use — your own footage, public-domain film, or anything
 licensed for it. What you point it at is your call.
+
+No responsibility is taken for what anyone converts or plays — see
+[`DISCLAIMER.md`](../DISCLAIMER.md). These scripts are under the
+noncommercial terms in [`LICENSE`](../LICENSE).

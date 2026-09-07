@@ -33,3 +33,10 @@ Render with [OpenSCAD](https://openscad.org/):
 ```sh
 openscad -o base-esp32-clock.stl base-esp32-clock.scad
 ```
+
+## Licence
+
+Public domain, CC0 1.0 — [`LICENSE`](LICENSE). Use it, change it, print
+it, sell the prints; no permission and no credit needed. This is the one
+directory with no conditions on it: the firmware and scripts above are
+noncommercial ([`../LICENSE`](../LICENSE)).
