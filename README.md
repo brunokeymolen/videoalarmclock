@@ -1,19 +1,44 @@
-# Video Alarm Clock
+<p align="center">
+  <img src="img/e.jpg" alt="Video Alarm Clock outer view" width="135">
+  &nbsp;&nbsp;
+  <img src="img/c.jpg" alt="Video Alarm Clock side view" width="160">
+  &nbsp;&nbsp;
+  <img src="img/a.png" alt="Video Alarm Clock" width="250">
+  &nbsp;&nbsp;
+  <img src="img/b.jpg" alt="Video Alarm Clock detail view" width="160">
+  &nbsp;&nbsp;
+  <img src="img/d.jpg" alt="Video Alarm Clock outer view" width="135">
+</p>
 
-A bedside clock that wakes you with video instead of a beep. 720×720
-touch screen, its own speaker, alarms it keeps through a power cut, and
-video you put on it yourself.
+<h1 align="center">Video Alarm Clock</h1>
+
+<p align="center">
+  A bedside clock that wakes you with your own video instead of a beep.
+</p>
+
+<p align="center">
+  <strong>720×720 touch screen</strong> ·
+  <strong>built-in speaker</strong> ·
+  <strong>power-cut-safe alarms</strong> ·
+  <strong>Wi-Fi updates</strong>
+</p>
+
+---
+
+Video Alarm Clock runs on a [Waveshare ESP32-P4 touch display](https://www.waveshare.com/esp32-p4-wifi6-touch-lcd-4b.htm) and plays
+videos from a microSD card. Flash it once, put it on Wi-Fi, add your
+media, and manage alarms from the device itself.
 
 This repository has **no source code**. It has the three things you need
 to own one:
 
-| | |
+| Directory | What it gives you |
 | --- | --- |
-| [`firmware/`](firmware/) | the software, and a one-command installer |
-| [`video/`](video/) | a container that converts and uploads any video file |
-| [`enclosure/`](enclosure/) | the printable stand |
+| [`firmware/`](firmware/) | The firmware binaries and one-command installer |
+| [`video/`](video/) | A container that converts and uploads video files |
+| [`enclosure/`](enclosure/) | The printable bedside stand |
 
-Once the firmware is on, the clock updates itself over Wi-Fi — gear icon
+Once the firmware is on, the clock updates itself over Wi-Fi: gear icon
 → **About** → **Check for updates**. You should only need the cable
 once.
 
@@ -28,8 +53,9 @@ once.
   see: [https://www.waveshare.com/esp32-p4-wifi6-touch-lcd-4b.htm]
 
   **The board this has been tested on carries an ESP32-P4 revision
-  v1.3.** The firmware is built for revision v1.00 and up, so other v1.x
-  parts should work, but v1.3 is the only one it has actually run on. If
+  v1.3.** The firmware is built for revisions v1.00 through v1.99, so
+  other v1.x parts should work, but v1.3 is the only one it has actually
+  run on. If
   you have a different revision and it works — or does not — that is
   worth reporting. A board the firmware refuses says so plainly while
   flashing: *"requires chip revision in range ... this chip is revision
@@ -43,7 +69,9 @@ once.
 - Linux or macOS for the firmware install below. Converting video also
   works on **Windows**, with Docker Desktop — step by step in
   [`video/README.md`](video/README.md#on-windows-step-by-step).
-- `esptool`, for the one-time install: `pip install --user esptool`
+- `esptool`, only if you install the firmware from a terminal:
+  `pip install --user esptool`. The browser installer in step 1 needs
+  nothing at all.
 - Docker, if you want the video container. Otherwise `ffmpeg` directly,
   plus `yt-dlp` only if you want the YouTube shortcut — see
   [`video/README.md`](video/README.md).
@@ -52,13 +80,29 @@ once.
 
 ## 1. Install the firmware
 
-Plug the board into your computer by its **UART** port. On Linux it
-appears as `/dev/ttyACM0`.
+Plug the board into your computer by its **UART** port — not the OTG
+one. Then either press this:
+<br><br>
+
+<div align="center">
+  <a href="https://brunokeymolen.github.io/videoalarmclock/">
+    <img src="https://img.shields.io/badge/Install%20from%20your%20browser-2ea44f?style=for-the-badge&logo=espressif&logoColor=white" alt="Install the firmware from your browser">
+  </a>
+</div>
+
+<br><br>
+It flashes the board from the page it opens, with nothing to install
+first. It needs Chrome, Edge or Firefox 151+ on a desktop — Safari and
+iOS have no Web Serial at all and cannot do this.
+
+Or from a terminal, which works everywhere:
 
 ```sh
 cd firmware
 ./flash.sh
 ```
+
+On Linux the board appears as `/dev/ttyACM0`.
 
 That downloads the newest release, checks it against the published
 checksum, and writes it. It takes about half a minute and ends with the

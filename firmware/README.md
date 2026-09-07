@@ -3,6 +3,12 @@
 `flash.sh` is the one-time install, over a USB cable. After it the clock
 updates itself — gear icon → **About** → **Check for updates**.
 
+There is also a **[browser installer](https://brunokeymolen.github.io/videoalarmclock/)**,
+which writes the same image from the same release without anything
+installed on your machine. It needs Web Serial — Chrome, Edge, or
+Firefox 151+ on a desktop — so this script remains the path that works
+everywhere, and the only one on Safari, iOS, or a headless machine.
+
 ```sh
 ./flash.sh                       # newest release, port autodetected
 ./flash.sh --version v0.2.0      # a specific release
@@ -18,10 +24,12 @@ pip install --user esptool
 
 ## Which boards this has run on
 
-The firmware is built for **ESP32-P4 revision v1.00 and up**. The board
-it has been developed and tested on carries a **revision v1.3** part —
-that is the only revision it has actually run on, so treat other v1.x
-parts as "should work, unverified".
+The firmware is built for **ESP32-P4 revisions v1.00 through v1.99** —
+that range is stamped into the image header, so it is what the bootloader
+actually enforces rather than what anybody remembers. The board it has
+been developed and tested on carries a **revision v1.3** part — that is
+the only revision it has actually run on, so treat other v1.x parts as
+"should work, unverified".
 
 A chip outside the built range does not fail quietly. The flash refuses
 with the revision in the message:
