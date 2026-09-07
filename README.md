@@ -150,8 +150,8 @@ updates need.
 
 ## 3. Put video on it
 
-Insert the microSD card. Video goes in a `/clock` directory on the card,
-flat, no subdirectories.
+Insert the microSD card. Video goes flat, no subdirectories on the card,
+
 
 **Any video file works** — phone footage, a camcorder transfer, a film
 you own, something you made. The clock plays one specific format, so it
