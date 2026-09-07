@@ -1,0 +1,134 @@
+# Publishes the browser installer at
+# https://brunokeymolen.github.io/videoalarmclock/
+#
+# The firmware image is fetched from the release here in the runner and
+# deployed as part of the site. It is never committed: `actions/deploy-pages`
+# uploads the site as an artifact rather than pushing a branch, so the 2 MB
+# `-full.bin` reaches the web without entering git history - which is the same
+# rule publish-release.sh follows on the other side.
+#
+# Nothing here has to be run by hand. publish-release.sh creates the GitHub
+# release, and that is what triggers this.
+name: Installer page
+
+on:
+  release:
+    types: [published]
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to serve (default: the newest release)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Let a release finish deploying rather than cancelling it half way; the
+# published site is what people flash from.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Work out which release to serve
+        id: tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_TAG: ${{ inputs.tag }}
+          EVENT_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          # A release event names its own tag. A manual run may name one.
+          # Otherwise take the newest, which is what a docs-only push wants:
+          # rebuild the page around the firmware that is already current.
+          TAG="${EVENT_TAG:-${INPUT_TAG:-}}"
+          if [ -z "$TAG" ]; then
+            TAG="$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName -q .tagName)"
+          fi
+          [ -n "$TAG" ] || { echo "::error::no release to serve"; exit 1; }
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Serving $TAG"
+
+      - name: Assemble the site
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          ASSET="nn20clock-$TAG-full.bin"
+
+          mkdir -p _site
+          cp -r docs/. _site/
+
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" \
+              --pattern "$ASSET" --pattern SHA256SUMS --dir _site
+
+          # The same check flash.sh makes, for the same reason: one line out
+          # of SHA256SUMS, because only one of the two images is downloaded.
+          ( cd _site && grep " $ASSET\$" SHA256SUMS | sha256sum -c - )
+
+          # SHA256SUMS lists an asset that is not being served; leaving it
+          # beside the image would invite someone to check the wrong thing.
+          rm _site/SHA256SUMS
+
+          # Generated rather than committed, so the version on the page and
+          # the image next to it cannot drift apart.
+          #
+          # chipFamily is the whole match: the firmware accepts ESP32-P4
+          # revisions v1.00-v1.99 and the bootloader enforces that itself, so
+          # no chipVariant is needed. serialType is deliberately absent -
+          # esp-web-tools looks for an exact serialType match first and falls
+          # back to a build that declares none, so leaving it out matches the
+          # board whichever of its two USB ports is used.
+          #
+          # new_install_prompt_erase offers the erase that flash.sh --erase
+          # does. new_install_improv_wait_time is 0 because this firmware does
+          # not speak Improv - Wi-Fi is chosen on the device - and without it
+          # the installer would wait, then offer a Wi-Fi step that goes nowhere.
+          cat > _site/manifest.json <<JSON
+          {
+            "name": "Video Alarm Clock",
+            "version": "$TAG",
+            "new_install_prompt_erase": true,
+            "new_install_improv_wait_time": 0,
+            "builds": [
+              {
+                "chipFamily": "ESP32-P4",
+                "parts": [
+                  { "path": "$ASSET", "offset": 0 }
+                ]
+              }
+            ]
+          }
+          JSON
+
+          python3 -c "import json;json.load(open('_site/manifest.json'))"
+          echo "--- _site ---"; ls -l _site
+
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
