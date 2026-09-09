@@ -30,7 +30,7 @@ may live anywhere; a directory outside the current one is mounted into
 the container read-only.
 
 Without the third argument it leaves the `.avi` in the current
-directory; copy it to `/clock` on the SD card yourself.
+directory; copy it to `/` (root) on the SD card yourself.
 
 ### Trimming
 
