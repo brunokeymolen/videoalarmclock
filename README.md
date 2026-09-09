@@ -257,7 +257,7 @@ will not boot at all — `firmware/flash.sh` still works, and
 | Time is wrong and stays wrong | No network, so no NTP | gear → Wi-Fi. Or set it by hand: gear → Time |
 | Upload refused / connection times out | The Media screen is not open | On the device: gear → Media, and leave it open |
 | The clock refuses a video | Not 720×720 MJPEG + PCM in AVI | Convert it with `video/videoclock`; the error names the codec it got |
-| No media listed, card is fine | Files are not in `/clock` on the card | They go in that directory, flat |
+| No media listed, card is fine | Files are not in `/` on the card | They go in the root directory, flat |
 | About: "Could not reach the update server" | No network | gear → Wi-Fi |
 | About: "The update server answered with nonsense" | No release published yet | Check the [releases page](../../releases) |
 | An update installs, then the old version is back | The new firmware did not start cleanly and was rolled back | Report it — that is a bug worth hearing about |
