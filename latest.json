@@ -1,7 +1,7 @@
 {
-  "version": "v1.0.1",
-  "notes": "fix; possible slowdown in playback for larger files",
-  "url": "https://github.com/brunokeymolen/videoalarmclock/releases/download/v1.0.1/nn20clock-v1.0.1.bin",
-  "size": 1872656,
-  "sha256": "fdab2352102b27bbcb57c0cbe828066dbcff9d0e86a24463aa951f08f27fc1d6"
+  "version": "v1.0.2",
+  "notes": "Brightness always follow schedule, playback position fix",
+  "url": "https://github.com/brunokeymolen/videoalarmclock/releases/download/v1.0.2/nn20clock-v1.0.2.bin",
+  "size": 1872288,
+  "sha256": "d99caf180a0ff57d9bd22fc4a10b5356ace34a41a8b0f3a9eaa52c6570061d7b"
 }
