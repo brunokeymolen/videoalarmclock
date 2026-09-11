@@ -280,6 +280,47 @@ It means something slightly different in the two places it appears:
 | **Alarm sound picker** | A different video each morning. The alarm row afterwards reads `MORNING / <random>`, or `Root / <random>` for the top level, so you can see which folder it draws from without opening the picker. |
 | **gear → Play** | Keeps drawing a new video every time one ends, until the sleep timer stops it. Set the sleep timer first — the two sit next to each other because they are one decision. See [The sleep timer](#the-sleep-timer). |
 
+### Openers: the videos that go first
+
+Sometimes a folder is not quite a shuffle. There is a title card that
+should open the evening, or three parts of one holiday that only make
+sense in order, and everything else in the folder can come in any order
+at all.
+
+**Put a number on the front of the file name.** `<random>` plays the
+numbered videos first, in the order of their numbers, and only then
+starts shuffling the rest.
+
+```
+1INTRO.AVI      plays first
+2HOLIDAY.AVI    then this
+15SUMMER.AVI    then this
+AFRICA.AVI      and now it shuffles: these three, in no order,
+COFFEE.AVI      for as long as playback goes on
+MIDSLEEP.AVI
+```
+
+The rules are short:
+
+| | |
+| --- | --- |
+| **The number goes at the front** | `1MYSTUFF.AVI` is an opener. `PART2.AVI` is not — that 2 is part of the name, not a position. |
+| **It is a number, not text** | `9` plays before `15`. Sorting by name would have put 15 first. |
+| **`01` is the same as `1`** | Pad the numbers if you like them lining up on your PC. The clock does not care. |
+| **Openers open, once** | Once the numbered ones have played, the shuffle starts and does not go back to them. A title card in the middle of the evening is not a title card. |
+| **Every `<random>` starts at the top** | Each morning the alarm rings, and each time you press **Play**, the openers run again from the first one. |
+
+A folder where every video is numbered is simply a playlist. There is
+nothing left to shuffle, so it plays 1, 2, 3 and then starts again at 1,
+for as long as playback goes on. A folder with openers and only one
+other video alternates between them, rather than repeating that one
+video all night.
+
+None of this needs setting up on the clock. Rename the file on your PC,
+or upload it under a numbered name, and `<random>` picks it up the next
+time it draws. Renaming is easiest over FTP — see
+[Managing folders with FileZilla](#managing-folders-with-filezilla).
+
 ### The sleep timer
 
 **gear → Play** has a sleep timer above the list, and it decides how
