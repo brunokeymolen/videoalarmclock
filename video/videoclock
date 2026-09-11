@@ -20,6 +20,11 @@
 #
 #   START=00:01:30 DURATION=00:00:45 ./videoclock in.mp4 clip.avi
 #
+# Upload straight into a folder on the card, created if it is not there.
+# Without this the video lands at the top level:
+#
+#   FOLDER=MORNING ./videoclock holiday.mov wakeup.avi 192.168.0.201
+#
 # A thin wrapper around the container in this directory: it builds the
 # image the first time, then runs the conversion inside it with the
 # current directory mounted, so the .avi lands where you are standing.
@@ -49,7 +54,7 @@ if [ "${1:-}" = "--update" ]; then
 fi
 
 if [ $# -lt 2 ] || [ $# -gt 3 ]; then
-    sed -n '3,21p' "$0" | sed 's/^#\ \?//'
+    sed -n '3,26p' "$0" | sed 's/^#\ \?//'
     exit 2
 fi
 
@@ -114,6 +119,7 @@ exec docker run --rm -i "${TTY_ARGS[@]}" \
     -e HOME=/tmp \
     -e "START=${START:-}" \
     -e "DURATION=${DURATION:-}" \
+    -e "FOLDER=${FOLDER:-}" \
     -v "$PWD:/out" \
     "${MOUNTS[@]}" \
     "$IMAGE" "$SCRIPT" "$@"

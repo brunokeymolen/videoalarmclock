@@ -150,7 +150,7 @@ updates need.
 
 ## 3. Put video on it
 
-Insert the microSD card. Video goes flat, no subdirectories on the card,
+Insert the microSD card and copy video onto it.
 
 
 **Any video file works** — phone footage, a camcorder transfer, a film
@@ -199,6 +199,8 @@ longer name cannot exist on the card at all — an upload would fail, or
 land under a mangled name that no longer matches the alarm pointing at
 it. The script refuses a bad name before doing any work.
 
+The same limit applies to folder names — see [Folders](#folders).
+
 **The format is fixed.** 720×720 MJPEG video, PCM stereo audio at
 44.1 kHz, in an AVI container. There is no other decoder in the
 firmware, so this is not a preference — anything else is refused by the
@@ -219,12 +221,240 @@ device.
 **Clock face → alarm icon.** Each alarm has a time, the days it repeats,
 and which video it plays. Alarms survive a power cut.
 
+Tapping the sound row opens a browser for the card. Besides the videos
+themselves it offers the **built-in tone**, and **`<random>`** — a
+different video every time the alarm rings. See [Folders](#folders) for how
+browsing works and what `<random>` draws from.
+
+If the video an alarm points at has been deleted, or the folder it draws
+from is empty, **the alarm still rings** — it falls back to the built-in
+tone. An alarm never goes silent.
+
 ## 5. Print the stand
 
 [`enclosure/`](enclosure/) has the STL and the OpenSCAD source it was
 generated from. It holds the board at a 15° tilt for a bedside table.
 
 ---
+
+## Folders
+
+Everything about organising the card in folders. Skip it if you have a
+handful of videos — the card's top level works fine on its own.
+
+The top level of the card is the root folder, and folders can nest:
+
+```text
+/                 the root folder
+/MORNING          a folder
+/WEEKEND/KIDS     a nested folder
+```
+
+**Folder names follow the same 8.3 rule as video names** — up to eight
+of `A-Z a-z 0-9 _ -`, and no extension. `morning` works, `weekend films`
+does not. Names come back in upper case, so a folder you make as
+`morning` shows up as `MORNING`.
+
+### Browsing on the clock
+
+The alarm sound picker and **gear → Play** both browse one folder at a
+time. Folders are the filled, coloured rows with a folder icon; videos
+are the plain ones. Tap a folder to go into it, tap `..` at the top to
+come back out.
+
+In the alarm picker, the arrow in the corner returns to the alarm — it
+does not go up a level, so you cannot leave the screen by accident while
+browsing.
+
+### `<random>`
+
+A different video every time, drawn from **the folder you are standing
+in** and only that folder. `<random>` inside `MORNING` never reaches into
+`MORNING/KIDS`. It appears once there are at least two videos in the
+folder to choose between.
+
+It means something slightly different in the two places it appears:
+
+| Where | What it does |
+| --- | --- |
+| **Alarm sound picker** | A different video each morning. The alarm row afterwards reads `MORNING / <random>`, or `Root / <random>` for the top level, so you can see which folder it draws from without opening the picker. |
+| **gear → Play** | Keeps drawing a new video every time one ends, until the sleep timer stops it. Set the sleep timer first — the two sit next to each other because they are one decision. See [The sleep timer](#the-sleep-timer). |
+
+### The sleep timer
+
+**gear → Play** has a sleep timer above the list, and it decides how
+long playback runs — not just when to cut it short.
+
+| Setting | What happens |
+| --- | --- |
+| **whole video** | Plays the video once and stops. The default. |
+| **15 min**, 30, 60, 90 | Plays for that long, then stops wherever it has got to. |
+
+A duration means exactly that. A 90-minute film with **15 min** set stops
+a quarter of an hour in. A three-minute clip with **30 min** set plays
+again and again until the half hour is up — and if you picked
+`<random>`, it draws a different video each time instead of repeating
+the same one. Pair `<random>` with a timer and you get an evening's
+worth without choosing anything else.
+
+It applies to a video you picked as well as to `<random>`; the only
+setting that plays something once is **whole video**.
+
+### Uploading straight into a folder
+
+`videoclock` puts the converted video wherever you say, creating the
+folder if it is not there — so there is no upload-then-move step.
+`FOLDER=` goes in front of the command, the same way `START=` and
+`DURATION=` do.
+
+**Linux and macOS**, from a video file:
+
+```sh
+FOLDER=MORNING ./videoclock holiday.mov wakeup.avi 192.168.0.201
+```
+
+and from a YouTube URL:
+
+```sh
+FOLDER=MORNING ./videoclock "https://youtu.be/VIDEO_ID" wakeup.avi 192.168.0.201
+```
+
+**Windows**, where `videoclock` does not run and you call the container
+directly — `FOLDER` becomes another `-e`, next to the ones already
+there. From a video file:
+
+```powershell
+docker run --rm -i -e HOME=/tmp -e FOLDER=MORNING -v "${PWD}:/out" videoalarmclock-video file2clock.sh holiday.mov wakeup.avi 192.168.0.201
+```
+
+and from a YouTube URL:
+
+```powershell
+docker run --rm -i -e HOME=/tmp -e FOLDER=MORNING -v "${PWD}:/out" videoalarmclock-video yt2clock.sh "https://youtu.be/VIDEO_ID" wakeup.avi 192.168.0.201
+```
+
+It combines with the trim, which is usually what you want on a long
+source:
+
+```sh
+START=00:01:30 DURATION=00:00:45 FOLDER=MORNING \
+    ./videoclock holiday.mov wakeup.avi 192.168.0.201
+```
+
+Nested folders work — `FOLDER=WEEKEND/KIDS` — and each level is created
+as needed. Folder names follow the 8.3 rule above, and the script checks
+yours before it spends ten minutes converting.
+
+Leave `FOLDER` out and the video lands at the top level of the card, as
+it always did. **The Media screen must be open on the clock either way.**
+
+### Managing folders with FileZilla
+
+If you would rather drag files than type commands, any FTP client works
+while the Media screen is open. [FileZilla](https://filezilla-project.org/)
+is the one this was tested with, and it is free on Windows, macOS and
+Linux.
+
+Connect with **File → Site Manager → New Site**:
+
+| | |
+| --- | --- |
+| Protocol | FTP |
+| Host | the clock's address, from **gear → Media** |
+| Port | 21 |
+| Encryption | *Only use plain FTP (insecure)* |
+| Logon Type | Anonymous |
+
+There is no username or password, by design — see
+[Uploads only work while the Media screen is open](#uploads-only-work-while-the-media-screen-is-open).
+Once connected you get the card in the right-hand pane and can make
+folders, rename, drag videos in and out, and delete, all by hand.
+
+Three things behave differently from an ordinary FTP server, and none of
+them is a fault:
+
+- **The Media screen must stay open.** Leave it and the server stops,
+  mid-transfer if one is running. FileZilla will report a lost
+  connection.
+- **Deleting a folder only works when it is empty.** FileZilla offers to
+  delete a folder and everything in it; the clock refuses the folder
+  part until you have emptied it.
+- **Dragging onto a name that already exists fails** rather than
+  overwriting. Delete the old one first, or pick another name.
+
+FileZilla's raw-command box — **Server → Enter custom command** — is
+also how you send `SITE HIDE`, further down.
+
+### Making and moving folders over FTP
+
+If you prefer the command line, or want to script it. Any FTP client
+will do this while the Media screen is open:
+
+```sh
+CLOCK=192.168.0.201
+
+curl -Q "MKD MORNING" ftp://$CLOCK/          # make a folder
+curl -T wakeup.avi ftp://$CLOCK/MORNING/     # upload into it
+curl ftp://$CLOCK/MORNING/                   # see what is in it
+curl -Q "RMD MORNING" ftp://$CLOCK/          # remove it, if empty
+```
+
+Moving a video that is already on the card — instant, whatever its size,
+because nothing is copied:
+
+```sh
+curl -Q "-RNFR wakeup.avi" -Q "-RNTO MORNING/wakeup.avi" ftp://$CLOCK/
+```
+
+Two things the clock will not do, on purpose:
+
+- **It will not delete a folder that still has anything in it.** Empty
+  it first. One mistyped path should not clear your card.
+- **It will not overwrite when renaming or moving.** If something is
+  already there under that name, the move is refused — the card holds
+  the only copy of your videos.
+
+Folders can nest, but keep it shallow: the clock shows one folder at a
+time on a small screen.
+
+**If you move a video, fix the alarm that uses it.** An alarm remembers
+where a video is, not just its name, so an alarm pointing at
+`WAKEUP.AVI` does not follow it into `MORNING/`. It falls back to the
+built-in tone rather than going silent, but you will want to set it
+again.
+
+### Advanced: hiding things you do not want to see
+
+Plug the card into a PC or a Mac and it comes back with folders you
+never made — a trash can, a search index. The clock hides the ones it
+knows about (`TRASH-~1`, `SYSTEM~1`, `RECYCL~1`, and a few more) so they
+do not clutter the picker.
+
+For anything it does not know about, there is a command:
+
+```sh
+curl -Q "SITE HIDE TRASH-~1" ftp://$CLOCK/     # stop listing it
+curl -Q "SITE UNHIDE TRASH-~1" ftp://$CLOCK/   # list it again
+```
+
+This sets the FAT *hidden* attribute, the same one Windows uses, so it
+sticks and your PC will respect it too.
+
+`SITE` is FTP's slot for commands a particular server invents — there is
+no standard way to change a file attribute over FTP — so this is the
+clock's own. Clients with a raw-command box can send it just as well as
+`curl` — in FileZilla that is **Server → Enter custom command**, with
+the card open.
+
+**Hidden means not listed, not locked.** A hidden file can still be
+downloaded, renamed and deleted by name; the clock simply stops offering
+it. That is also how you undo it if you hide the wrong thing.
+
+The clock never hides anything on its own except the known names above,
+and it will not hide a folder just because its name looks mangled: `~1`
+is what FAT does to *any* long name, so a folder you created from your
+PC as "Morning Films" arrives as `MORNIN~1` and looks exactly like junk.
+Hiding those would lose your own work.
 
 ## Updating later
 
@@ -257,7 +487,13 @@ will not boot at all — `firmware/flash.sh` still works, and
 | Time is wrong and stays wrong | No network, so no NTP | gear → Wi-Fi. Or set it by hand: gear → Time |
 | Upload refused / connection times out | The Media screen is not open | On the device: gear → Media, and leave it open |
 | The clock refuses a video | Not 720×720 MJPEG + PCM in AVI | Convert it with `video/videoclock`; the error names the codec it got |
-| No media listed, card is fine | Files are not in `/` on the card | They go in the root directory, flat |
+| No media listed, card is fine | The card is empty, or the videos are in a folder | Tap a folder row to go into it; `..` goes back out |
+| A folder cannot be created | The name is longer than eight characters | Rename it — folder names follow the same 8.3 rule as videos |
+| A folder will not delete | It still has something in it | Delete what is inside first; the clock refuses to delete a folder recursively |
+| A move or rename is refused | Something already has that name | The clock never overwrites; pick another name, or delete the other one first |
+| FileZilla: "could not connect" or a dropped transfer | The Media screen is not open, or was left during the transfer | gear → Media, and leave it open. Use plain FTP, anonymous — the clock has no TLS and no login |
+| An alarm plays the tone instead of its video | Its video was deleted, moved, or its folder is empty | Set the sound again: alarm → sound row |
+| A folder is on the card but the clock does not list it | It is hidden, or it is one of the desktop leftovers the clock skips | [Folders → Advanced](#advanced-hiding-things-you-do-not-want-to-see); `SITE UNHIDE` brings it back |
 | About: "Could not reach the update server" | No network | gear → Wi-Fi |
 | About: "The update server answered with nonsense" | No release published yet | Check the [releases page](../../releases) |
 | An update installs, then the old version is back | The new firmware did not start cleanly and was rolled back | Report it — that is a bug worth hearing about |

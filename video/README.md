@@ -30,7 +30,19 @@ may live anywhere; a directory outside the current one is mounted into
 the container read-only.
 
 Without the third argument it leaves the `.avi` in the current
-directory; copy it to `/` (root) on the SD card yourself.
+directory; copy it onto the SD card yourself — the top level of the
+card, or a folder on it if you want to organise them.
+
+With an address, `FOLDER=` uploads straight into a folder on the card
+and creates it if it is not there, so there is no upload-then-move step:
+
+```sh
+FOLDER=MORNING ./videoclock holiday.mov wakeup.avi 192.168.0.201
+FOLDER=MORNING ./videoclock "https://youtu.be/VIDEO_ID" wake.avi 192.168.0.201
+```
+
+Folder names follow the same 8.3 rule as video names, minus the
+extension. Nested folders work: `FOLDER=WEEKEND/KIDS`.
 
 ### Trimming
 
@@ -180,6 +192,27 @@ docker run --rm -i -e HOME=/tmp -e START=00:01:30 -e DURATION=00:00:45 -v "${PWD
 Either can be given alone: `START` on its own runs to the end of the
 video, `DURATION` on its own takes from the beginning.
 
+### Step 6b — Put it straight into a folder
+
+The clock can organise videos in folders, and the upload can go into one
+directly rather than landing at the top level and being moved
+afterwards. One more `-e`, and the folder is created if it is not there:
+
+```powershell
+docker run --rm -i -e HOME=/tmp -e FOLDER=MORNING -v "${PWD}:/out" videoalarmclock-video file2clock.sh holiday.mov wakeup.avi 192.168.0.201
+```
+
+The same for YouTube:
+
+```powershell
+docker run --rm -i -e HOME=/tmp -e FOLDER=MORNING -v "${PWD}:/out" videoalarmclock-video yt2clock.sh "https://youtu.be/VIDEO_ID" wakeup.avi 192.168.0.201
+```
+
+Folder names follow the same 8.3 rule as video names, minus the
+extension: up to eight of `A-Z a-z 0-9 _ -`. `MORNING` works,
+`WEEKEND FILMS` does not. Nested folders work too —
+`-e FOLDER=WEEKEND/KIDS` — and each level is created as needed.
+
 ### Step 7 — Get it onto the clock
 
 **Over the network.** On the device, open **gear icon → Media** and leave
@@ -193,9 +226,14 @@ Desktop — allow it on **private** networks. Nothing has to be opened
 inbound: the upload uses passive FTP, so the container makes both
 connections outward to the clock.
 
-**Or by hand.** Put the microSD card in your PC, make a folder called
-`clock` at the top level of the card if it is not there already, and copy
-the `.avi` into it. Flat — the clock does not look in subdirectories.
+**Or by hand.** Put the microSD card in your PC and copy the `.avi` onto
+it — the top level of the card is fine, and so is a folder you make
+there. The clock browses folders one at a time when you pick an alarm
+sound.
+
+Folder names follow the same rule as video names: up to eight of
+`A-Z a-z 0-9 _ -`, with no extension. `morning` works, `weekend films`
+does not.
 
 ### The parts of that command
 

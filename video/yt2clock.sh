@@ -22,6 +22,12 @@
 # other decoder in the firmware - so the ffmpeg line below is fixed
 # rather than configurable.
 #
+# By default the upload lands at the top level of the card. FOLDER= puts
+# it straight into a folder, creating it if it is not there:
+#
+#   FOLDER=MORNING ./yt2clock.sh "https://youtu.be/VIDEO_ID" clip.avi \
+#                                 192.168.0.201
+#
 # With a third argument the result is uploaded over FTP. THE CLOCK ONLY
 # LISTENS WHILE ITS MEDIA SCREEN IS OPEN: on the device, gear icon ->
 # Media. Open it before running this, and leave it open until the
@@ -41,7 +47,7 @@ DURATION="${DURATION:-}"
 die() { printf 'yt2clock: %s\n' "$*" >&2; exit 1; }
 
 usage() {
-    sed -n '3,30p' "$0" | sed 's/^#\ \?//'
+    sed -n '3,34p' "$0" | sed 's/^#\ \?//'
     exit 2
 }
 
@@ -52,6 +58,9 @@ usage() {
 URL="$1"
 NAME="$2"
 CLOCK="${3:-}"
+
+# Which folder on the card it lands in. Empty is the top level.
+FOLDER="${FOLDER:-}"
 
 #
 # 8.3, and enforced here rather than discovered on the card.
@@ -205,13 +214,34 @@ echo "==> $NAME (${SIZE_MB} MB)"
 # -------------------------------------------------------------- upload --
 
 if [ -z "$CLOCK" ]; then
-    echo "    copy it to /clock on the card, or re-run with the clock's address"
+    echo "    copy it onto the card, or re-run with the clock's address"
     exit 0
 fi
 
-echo "==> uploading to $CLOCK"
+echo "==> uploading to $CLOCK${FOLDER:+/$FOLDER}"
 echo "    the clock must have its Media screen open (gear icon -> Media)"
-if ! curl --connect-timeout 10 --ftp-method nocwd -T "$NAME" "ftp://$CLOCK/"; then
+
+#
+# Make the folder first, a level at a time.
+#
+# The clock creates one directory per MKD and not a chain of them - a
+# mistyped path should be an error rather than a tree - so a nested
+# FOLDER needs one call per level. An existing level answers 550, which
+# is not a problem and is why these are allowed to fail: the upload
+# below is the real test, and it gives a better message.
+#
+if [ -n "$FOLDER" ]; then
+    LEVEL=""
+    IFS=/ read -ra FOLDER_PARTS <<< "$FOLDER"
+    for PART in "${FOLDER_PARTS[@]}"; do
+        LEVEL="${LEVEL:+$LEVEL/}$PART"
+        curl -s -o /dev/null --connect-timeout 10 \
+             -Q "MKD $LEVEL" "ftp://$CLOCK/" >/dev/null 2>&1 || true
+    done
+fi
+
+if ! curl --connect-timeout 10 --ftp-method nocwd -T "$NAME" \
+     "ftp://$CLOCK/${FOLDER:+$FOLDER/}"; then
     die "upload failed - is the Media screen open on the clock?"
 fi
 echo "==> done"
