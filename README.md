@@ -177,6 +177,20 @@ files run about 50 MB per minute:
 START=00:01:30 DURATION=00:00:45 ./videoclock holiday.mov wakeup.avi
 ```
 
+Videos arrive at very different levels, and the volume that suits one
+can leave the next inaudible. `AGC=1` levels the audio as it converts,
+so everything on the card wakes you about equally hard:
+
+```sh
+AGC=1 ./videoclock holiday.mov wakeup.avi
+AGC=1 ./videoclock "https://youtu.be/VIDEO_ID" wakeup.avi
+```
+
+It measures the file and applies one fixed gain to all of it, rather
+than riding the volume as it plays — so the quiet intro stays quieter
+than the chorus. Details, and the knobs, in
+[`video/README.md`](video/README.md#evening-out-the-loudness).
+
 The clock's address is shown on its **gear → Media** screen, in blue at
 the top. **That screen must be open while you upload** — see below.
 
@@ -439,6 +453,13 @@ curl -T wakeup.avi ftp://$CLOCK/MORNING/     # upload into it
 curl ftp://$CLOCK/MORNING/                   # see what is in it
 curl -Q "RMD MORNING" ftp://$CLOCK/          # remove it, if empty
 ```
+
+One trap if you script this yourself: **do not add `--ftp-method
+nocwd`.** It skips the directory change and puts the whole path in the
+store command — `STOR MORNING/wakeup.avi` — and the clock reads that
+argument as a filename, so the upload lands at the top level and the
+folder is ignored without any error. curl's default walks into the
+folder first and stores a bare name, which is what the clock expects.
 
 Moving a video that is already on the card — instant, whatever its size,
 because nothing is copied:

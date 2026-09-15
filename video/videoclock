@@ -25,6 +25,12 @@
 #
 #   FOLDER=MORNING ./videoclock holiday.mov wakeup.avi 192.168.0.201
 #
+# Even out the loudness, so a quiet video and a loud one wake you
+# equally hard. Works for both halves, a file on disk and a URL:
+#
+#   AGC=1 ./videoclock holiday.mov wakeup.avi
+#   AGC=1 ./videoclock "https://youtu.be/VIDEO_ID" wakeup.avi
+#
 # A thin wrapper around the container in this directory: it builds the
 # image the first time, then runs the conversion inside it with the
 # current directory mounted, so the .avi lands where you are standing.
@@ -120,6 +126,10 @@ exec docker run --rm -i "${TTY_ARGS[@]}" \
     -e "START=${START:-}" \
     -e "DURATION=${DURATION:-}" \
     -e "FOLDER=${FOLDER:-}" \
+    -e "AGC=${AGC:-}" \
+    -e "AGC_I=${AGC_I:-}" \
+    -e "AGC_TP=${AGC_TP:-}" \
+    -e "AGC_LRA=${AGC_LRA:-}" \
     -v "$PWD:/out" \
     "${MOUNTS[@]}" \
     "$IMAGE" "$SCRIPT" "$@"

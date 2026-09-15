@@ -47,8 +47,11 @@ RUN curl -fsSL \
     && chmod a+rx /usr/local/bin/yt-dlp \
     && yt-dlp --version
 
-COPY yt2clock.sh file2clock.sh /usr/local/bin/
-RUN chmod a+rx /usr/local/bin/yt2clock.sh /usr/local/bin/file2clock.sh
+# agc.sh is sourced by both converters rather than run, so it needs to
+# land beside them - they look for it next to themselves.
+COPY yt2clock.sh file2clock.sh agc.sh /usr/local/bin/
+RUN chmod a+rx /usr/local/bin/yt2clock.sh /usr/local/bin/file2clock.sh \
+    && chmod a+r /usr/local/bin/agc.sh
 
 # Output lands in the caller's directory, which the wrapper mounts here.
 WORKDIR /out

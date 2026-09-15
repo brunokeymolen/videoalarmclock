@@ -58,6 +58,53 @@ START=00:01:30 DURATION=00:00:45 ./videoclock holiday.mov wakeup.avi
 Either can be given alone: `START` on its own runs to the end,
 `DURATION` on its own takes from the beginning.
 
+### Evening out the loudness
+
+Videos arrive at wildly different levels. A music video mastered for
+loudness and a clip recorded off a phone can sit 20 dB apart, which
+means the volume that is right for one is either inaudible or a heart
+attack for the other — and you find out at 7am.
+
+`AGC=1` fixes that at conversion time, so every file on the card wakes
+you about equally hard:
+
+```sh
+AGC=1 ./videoclock holiday.mov wakeup.avi
+AGC=1 ./videoclock "https://youtu.be/VIDEO_ID" wakeup.avi
+```
+
+It measures the source, then applies **one fixed gain to the whole
+file**. Nothing is compressed and nothing is ducked: the quiet intro is
+still quieter than the chorus, and the swell that actually wakes you
+survives intact. What changes is where the file as a whole sits
+relative to every other file.
+
+The cost is one extra pass over the source before converting. That pass
+is audio only, so on a four-minute video it is seconds rather than
+minutes, but it is why this is off by default.
+
+Three knobs, rarely worth touching:
+
+| Variable | Default | What it is |
+| --- | --- | --- |
+| `AGC_I` | `-16` | Target loudness in LUFS. Lower is quieter. `-23` is the broadcast standard; `-16` is a few dB hotter, which suits a small speaker across a bedroom |
+| `AGC_TP` | `-1.5` | Ceiling on the true peak, in dBTP. The headroom that keeps the loudest moment from clipping |
+| `AGC_LRA` | `11` | Target loudness range. ffmpeg's own default, left alone so it does not fight the measurement |
+
+Two things worth knowing:
+
+- **It will not clip to reach the target.** A source that is already
+  peaking cannot be lifted the full distance, and the ceiling wins. Such
+  a file ends up a little below target rather than distorted.
+- **It works for both halves.** A file on disk and a YouTube URL take
+  the same option; the measurement simply happens after the download.
+  It is worth less on YouTube, which already serves audio normalised to
+  roughly −14 LUFS, but a URL and a phone recording still end up on
+  the same card, which is where the mismatch shows.
+
+A source with no audio, or one whose audio is pure silence, is converted
+without AGC and says so rather than failing.
+
 ### Keeping the YouTube half working
 
 YouTube changes how it hands out download URLs often enough that a
@@ -213,6 +260,27 @@ extension: up to eight of `A-Z a-z 0-9 _ -`. `MORNING` works,
 `WEEKEND FILMS` does not. Nested folders work too —
 `-e FOLDER=WEEKEND/KIDS` — and each level is created as needed.
 
+### Step 6c — Even out the loudness
+
+Videos arrive at very different levels, and the volume that is right for
+one can be inaudible for the next. `-e AGC=1` measures the source and
+levels it, so everything on the card wakes you about equally hard:
+
+```powershell
+docker run --rm -i -e HOME=/tmp -e AGC=1 -v "${PWD}:/out" videoalarmclock-video file2clock.sh holiday.mov wakeup.avi
+```
+
+The same for YouTube:
+
+```powershell
+docker run --rm -i -e HOME=/tmp -e AGC=1 -v "${PWD}:/out" videoalarmclock-video yt2clock.sh "https://youtu.be/VIDEO_ID" wakeup.avi
+```
+
+It applies one fixed gain to the whole file rather than riding the
+volume as it plays, so the quiet parts stay quieter than the loud parts.
+It costs one extra pass over the source, and it works the same way for
+`yt2clock.sh` — the measurement just happens after the download.
+
 ### Step 7 — Get it onto the clock
 
 **Over the network.** On the device, open **gear icon → Media** and leave
@@ -244,6 +312,7 @@ Worth knowing if you want to change something:
 | `--rm` | delete the container when it exits; the `.avi` is not inside it |
 | `-i` | keep input attached, so you see ffmpeg's progress |
 | `-e HOME=/tmp` | yt-dlp writes a cache to `$HOME`, which does not exist in the container otherwise |
+| `-e AGC=1` | optional; level the audio so this video is as loud as the others (step 6c). Both scripts take it |
 | `-v "${PWD}:/out"` | show the container the folder you are standing in. This is how your video gets in and the `.avi` gets out |
 | `videoalarmclock-video` | the image built in step 3 |
 | `file2clock.sh` / `yt2clock.sh` | which of the two jobs to do |
@@ -266,7 +335,9 @@ Windows bind mounts do not carry Linux ownership in the first place.
 | `'wakeup.avi' is not an 8.3 name` | The name is too long, or has characters outside `A-Z a-z 0-9 _ -` | Rename it: eight characters at most, then `.avi` |
 | `'wakeup.avi' already exists here` | A previous run left one; the script refuses to overwrite | Delete it or pick another name |
 | `'holiday.mov' is not a file` | The video is not in the folder the terminal is standing in | Start the terminal in the folder that holds the video |
+| `AGC='...' is neither on nor off` | The value is not one the script recognises | Use `-e AGC=1`, or leave the option off entirely |
 | `upload failed - is the Media screen open?` | It is not, or it was closed mid-transfer | On the device: gear → Media, leave it open, run it again |
+| `upload failed - ... or the folder '...' could not be created` | The Media screen is shut, or the folder name is not one the card can hold | Open gear → Media; check the folder is up to 8 of `A-Z a-z 0-9 _ -` per level |
 | A YouTube download fails as if the video were gone | Stale yt-dlp, or a stale Deno inside the image | `docker build --no-cache -t videoalarmclock-video .` in the `video` folder, which refreshes both |
 
 ## Without Docker
@@ -279,8 +350,14 @@ tools yourself. They take the same arguments as `videoclock`.
 ./yt2clock.sh "https://youtu.be/PIb6AZdTr-A" clg308.avi # + yt-dlp
 ```
 
-`file2clock.sh` needs only **ffmpeg**. `yt2clock.sh` additionally needs
+`file2clock.sh` needs only **ffmpeg** — and `ffprobe`, which ships
+alongside it, if you use `AGC=`. `yt2clock.sh` additionally needs
 **yt-dlp** and a JavaScript runtime.
+
+`START`, `DURATION`, `FOLDER` and `AGC` work the same way here. Both
+scripts read `AGC=`, and both need `agc.sh` to be sitting next to them
+— they source it rather than duplicating it, and they say so plainly if
+it has been left behind.
 
 ---
 
@@ -477,6 +554,47 @@ ffmpeg -ss 00:01:30 -t 00:02:00 -i input.mp4 \
   -c:a pcm_s16le -ar 44100 -ac 2 \
   clip720.avi
 ```
+
+And what `AGC=1` adds is two passes of ffmpeg's `loudnorm` rather than
+one. First measure the source, printing numbers rather than a file:
+
+```sh
+ffmpeg -i input.mp4 -vn \
+  -af "loudnorm=I=-16:TP=-1.5:LRA=11:print_format=json" \
+  -f null -
+```
+
+That prints `input_i`, `input_tp`, `input_lra`, `input_thresh` and
+`target_offset`. Feed all five back into the convert, and `loudnorm`
+switches from riding the gain as it plays to working out **one constant
+gain** for the whole file:
+
+```sh
+ffmpeg -i input.mp4 \
+  -vf "scale=720:720:force_original_aspect_ratio=increase,crop=720:720" \
+  -c:v mjpeg -q:v 5 -r 20 \
+  -af "loudnorm=I=-16:TP=-1.5:LRA=11:measured_I=-27.6:measured_TP=-3.2\
+:measured_LRA=7.4:measured_thresh=-38.1:offset=-0.1:linear=true:dual_mono=true" \
+  -c:a pcm_s16le -ar 44100 -ac 2 \
+  clip720.avi
+```
+
+The second pass is the point of the exercise. A single-pass `loudnorm`
+compresses — it pushes quiet passages up and pulls loud ones down as the
+file plays, which on music is audible as pumping and destroys the swell
+that makes a video work as an alarm. `linear=true` with real
+measurements is a volume knob turned once, before playback, and nothing
+else. (`loudnorm` abandons `linear` on its own if the constant gain
+would breach `TP`; that only happens where the alternative is clipping.)
+
+`dual_mono=true` corrects the measurement of a mono source: R128 reads
+mono about 3 dB quieter than the same material coming out of two
+speakers, and `-ac 2` means it will be. It does nothing to a source that
+is already stereo.
+
+If you are measuring by hand, note that both passes must see the same
+audio — a `-ss`/`-t` trim on the convert needs the same trim on the
+measurement, or the file is levelled against audio that is not in it.
 
 ---
 

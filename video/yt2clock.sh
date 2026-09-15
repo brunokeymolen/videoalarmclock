@@ -28,6 +28,12 @@
 #   FOLDER=MORNING ./yt2clock.sh "https://youtu.be/VIDEO_ID" clip.avi \
 #                                 192.168.0.201
 #
+# AGC=1 evens out the loudness, so a quiet video and a loud one wake you
+# equally hard. It measures the downloaded audio first and then applies
+# one fixed gain to the whole file:
+#
+#   AGC=1 ./yt2clock.sh "https://youtu.be/VIDEO_ID" clip.avi
+#
 # With a third argument the result is uploaded over FTP. THE CLOCK ONLY
 # LISTENS WHILE ITS MEDIA SCREEN IS OPEN: on the device, gear icon ->
 # Media. Open it before running this, and leave it open until the
@@ -38,6 +44,7 @@ set -euo pipefail
 
 YTDLP="${YTDLP:-yt-dlp}"
 FFMPEG="${FFMPEG:-ffmpeg}"
+FFPROBE="${FFPROBE:-ffprobe}"
 
 # Optional trim, applied to the downloaded source. Empty means "all of
 # it". videoclock passes these through into the container.
@@ -46,8 +53,18 @@ DURATION="${DURATION:-}"
 
 die() { printf 'yt2clock: %s\n' "$*" >&2; exit 1; }
 
+#
+# AGC=, and the three targets under it, live next door in agc.sh -
+# file2clock.sh does the same job on a file that was already on disk,
+# and the logic is subtle enough that two copies would drift.
+#
+AGC_LIB="$(dirname "${BASH_SOURCE[0]}")/agc.sh"
+[ -r "$AGC_LIB" ] || die "cannot find agc.sh next to this script ($AGC_LIB)"
+# shellcheck source=agc.sh
+. "$AGC_LIB"
+
 usage() {
-    sed -n '3,34p' "$0" | sed 's/^#\ \?//'
+    sed -n '3,40p' "$0" | sed 's/^#\ \?//'
     exit 2
 }
 
@@ -77,6 +94,10 @@ if ! printf '%s' "$NAME" | grep -Eq '^[A-Za-z0-9_-]{1,8}\.[Aa][Vv][Ii]$'; then
 fi
 
 [ -e "$NAME" ] && die "'$NAME' already exists here; move it or pick another name"
+
+# Before the download deliberately: a mistyped AGC= should not cost five
+# minutes of fetching first.
+agc_configure
 
 for tool in "$YTDLP" "$FFMPEG"; do
     command -v "$tool" >/dev/null 2>&1 || die "$tool is not installed - see README.md"
@@ -176,13 +197,19 @@ SOURCE="${FOUND[0]}"
 # than decode everything and throw most of it away. On a long file that
 # is the difference between seconds and minutes.
 #
+# Both the measurement and the convert use this: they have to see the
+# same audio, or the clip is levelled against audio that is not in it.
 TRIM=()
 [ -n "$START" ] && TRIM+=(-ss "$START")
 [ -n "$DURATION" ] && TRIM+=(-t "$DURATION")
 
+# Fills in AUDIO_FILTER, or leaves it empty and says why. See agc.sh.
+agc_measure "$SOURCE"
+
 echo "==> converting to 720x720 MJPEG + PCM"
 [ -n "$START" ] && echo "    from $START"
 [ -n "$DURATION" ] && echo "    for  $DURATION"
+[ -n "$AGC" ] && echo "    levelled to $AGC_I LUFS"
 #
 # scale ... force_original_aspect_ratio=increase then crop: fill the
 # square panel and cut the overflow, rather than letterboxing a 16:9
@@ -203,6 +230,7 @@ echo "==> converting to 720x720 MJPEG + PCM"
     -c:v mjpeg \
     -q:v 5 \
     -r 20 \
+    ${AUDIO_FILTER[@]+"${AUDIO_FILTER[@]}"} \
     -c:a pcm_s16le \
     -ar 44100 \
     -ac 2 \
@@ -240,8 +268,35 @@ if [ -n "$FOLDER" ]; then
     done
 fi
 
-if ! curl --connect-timeout 10 --ftp-method nocwd -T "$NAME" \
+#
+# --ftp-method multicwd, which is curl's default and is deliberate here.
+#
+# The obvious-looking nocwd is wrong for this server. It skips CWD and
+# puts the whole path in the store command - "STOR VRT/clip.avi" - and
+# the clock reads that argument as a filename rather than as a path, so
+# the file lands at the top level of the card and the folder is quietly
+# ignored. At the top level there is no path to mishandle, which is why
+# this only ever went wrong with FOLDER set.
+#
+# multicwd sends one CWD per level and then a bare "STOR clip.avi",
+# which is what the server expects - and one level at a time, matching
+# the MKD loop above rather than assuming the clock can walk a path in
+# a single command.
+#
+if ! curl --connect-timeout 10 --ftp-method multicwd -T "$NAME" \
      "ftp://$CLOCK/${FOLDER:+$FOLDER/}"; then
+    #
+    # With a folder there are now two things that can fail, and they
+    # want different answers: the media screen being shut, or the CWD
+    # into a folder that was not created. The MKD above is allowed to
+    # fail silently because an existing folder answers 550, so this is
+    # the first place a folder problem can be reported.
+    #
+    if [ -n "$FOLDER" ]; then
+        die "upload failed - either the Media screen is not open on the
+     clock, or the folder '$FOLDER' could not be created. Check the
+     folder name: up to 8 of A-Z a-z 0-9 _ - per level"
+    fi
     die "upload failed - is the Media screen open on the clock?"
 fi
 echo "==> done"
