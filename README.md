@@ -46,7 +46,8 @@ once.
 
 - A **Waveshare ESP32-P4-WIFI6-Touch-LCD-4B** — 720×720 MIPI-DSI panel,
   GT911 touch, ES8311 audio codec, 32 MB flash, 32 MB PSRAM. 
-  see: [https://www.waveshare.com/esp32-p4-wifi6-touch-lcd-4b.htm]
+  see: [https://www.waveshare.com/esp32-p4-wifi6-touch-lcd-4b.htm] 
+  **I tested it on the ```Onboard Camera Interface``` version only so far.**
 
   **The board this has been tested on carries an ESP32-P4 revision
   v1.3.** The firmware is built for revisions v1.00 through v1.99, so
@@ -54,7 +55,7 @@ once.
   run on. If
   you have a different revision and it works — or does not — that is
   worth reporting. A board the firmware refuses says so plainly while
-  flashing: *"requires chip revision in range ... this chip is revision
+  flashing: *"requires chip revision in range ... this chip is revision.
   ..."*.
 - A **USB-C cable** to the board's UART port.
 - A **microSD card**, formatted **FAT32**. Video lives here, not in
