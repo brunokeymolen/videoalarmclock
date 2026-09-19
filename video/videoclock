@@ -55,7 +55,9 @@ docker info >/dev/null 2>&1 || die "docker is installed but not usable.
 
 if [ "${1:-}" = "--update" ]; then
     echo "==> rebuilding with a current yt-dlp"
-    docker build --no-cache -t "$IMAGE" "$HERE"
+    SRC_HASH="$(cd "$HERE" && cat Dockerfile yt2clock.sh file2clock.sh agc.sh \
+        | sha256sum | cut -c1-16)"
+    docker build --no-cache --label "videoclock.src=$SRC_HASH" -t "$IMAGE" "$HERE"
     exit 0
 fi
 
@@ -64,9 +66,22 @@ if [ $# -lt 2 ] || [ $# -gt 3 ]; then
     exit 2
 fi
 
-if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
+# The scripts are copied into the image, so an image built before they
+# changed runs the old ones - which silently ignore settings added since,
+# like FOLDER= and AGC=. The image is labelled with a hash of what went
+# into it and rebuilt when that no longer matches. Only the COPY layer
+# is redone, so this takes seconds and keeps the cached yt-dlp.
+SRC_HASH="$(cd "$HERE" && cat Dockerfile yt2clock.sh file2clock.sh agc.sh \
+    | sha256sum | cut -c1-16)"
+BUILT_HASH="$(docker image inspect "$IMAGE" \
+    --format '{{ index .Config.Labels "videoclock.src" }}' 2>/dev/null || true)"
+
+if [ -z "$BUILT_HASH" ] && ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
     echo "==> building the image (once; a few minutes)"
-    docker build -t "$IMAGE" "$HERE"
+    docker build --label "videoclock.src=$SRC_HASH" -t "$IMAGE" "$HERE"
+elif [ "$BUILT_HASH" != "$SRC_HASH" ]; then
+    echo "==> scripts changed since the image was built; updating it"
+    docker build --label "videoclock.src=$SRC_HASH" -t "$IMAGE" "$HERE"
 fi
 
 # ------------------------------------------------------ which script --
