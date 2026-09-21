@@ -1,7 +1,7 @@
 {
-  "version": "v1.1.1",
-  "notes": "Added AGC to video script. Playback fix.",
-  "url": "https://github.com/brunokeymolen/videoalarmclock/releases/download/v1.1.1/nn20clock-v1.1.1.bin",
-  "size": 1887344,
-  "sha256": "50ccff5740f6f652a824828a9485489d725cf159f941262f225a7ffa46ead018"
+  "version": "v1.1.2",
+  "notes": "Minimum playback brightness setting.",
+  "url": "https://github.com/brunokeymolen/videoalarmclock/releases/download/v1.1.2/nn20clock-v1.1.2.bin",
+  "size": 1888208,
+  "sha256": "d88409f9598fed41a6678aea987e33038f9c55b05cf15a98a92236d6826b7a2e"
 }
