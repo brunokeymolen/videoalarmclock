@@ -34,9 +34,20 @@ Render with [OpenSCAD](https://openscad.org/):
 openscad -o base-esp32-clock.stl base-esp32-clock.scad
 ```
 
-## Licence
+## Origin & Attribution
 
-Public domain, CC0 1.0 — [`LICENSE`](LICENSE). Use it, change it, print
-it, sell the prints; no permission and no credit needed. This is the one
-directory with no conditions on it: the firmware and scripts above are
-noncommercial ([`../LICENSE`](../LICENSE)).
+This is an independently created OpenSCAD stand for the Waveshare ESP32-P4 Smart 86 Touch Display.
+
+I originally printed and tested [https://makerworld.com/en/models/2666288-waveshare-esp32-p4-smart-86-touch-display-stand#profileId-2950356], but the fit was too tight for my display / Anycubic I3 Mega printer tolerances. 
+I therefore recreated the stand from scratch in OpenSCAD using my own dimensions.
+
+The slot is slightly wider and deeper, and the rounding and some dimensions differ from the referenced model. 
+
+The original model served as inspiration and feel free to give it a shot, it seems to work just fine for others:
+[https://3dgo.app/models/makerworld/2666288], [https://makerworld.com/en/models/2666288-waveshare-esp32-p4-smart-86-touch-display-stand#profileId-2950356]
+
+Included:
+
+OpenSCAD source & STL ready for printing
+
+
