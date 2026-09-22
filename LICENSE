@@ -11,9 +11,8 @@ WHAT THIS COVERS
   this repository - firmware/, video/, docs/, img/ and the files at the
   top level - along with the released firmware images they install.
 
-  They do NOT cover enclosure/. The printable stand and its OpenSCAD
-  source are dedicated to the public domain under CC0 1.0; see
-  enclosure/LICENSE. Print it, change it, sell it, no permission needed.
+  They do NOT cover enclosure/.
+  
 
 
 NONCOMMERCIAL LICENSE
