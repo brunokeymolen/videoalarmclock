@@ -250,6 +250,8 @@ tone. An alarm never goes silent.
 [`enclosure/`](enclosure/) has the STL and the OpenSCAD source it was
 generated from. It holds the board at a 15° tilt for a bedside table.
 
+See enclosure/README.md for design notes and attribution.
+
 ---
 
 ## Folders

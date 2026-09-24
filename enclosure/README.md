@@ -2,43 +2,10 @@
 
 A base that holds the board at a 15° tilt, for a bedside table.
 
-| File | |
-| --- | --- |
-| `base-esp32-clock.stl` | print this |
-| `base-esp32-clock.scad` | the OpenSCAD source it came from |
+<p align="left">
+  <img src="../img/b.jpg" width="30%" alt="Waveshare ESP32-P4 Smart 86 stand">
+</p>
 
-## Printing
+The stand: OpenSCAD and STL files can be downloaded from:
 
-Nothing special: PLA, 0.2 mm layers, 15–20% infill. It prints flat on
-its base with no supports.
-
-The board slides into the slot. The fit is deliberately close — if your
-printer runs tight, scale the cutout rather than forcing the board.
-
-## Changing it
-
-The dimensions are named at the top of the `.scad`:
-
-```
-length1, width1, height1   the base block
-lengthEsp, widthEsp, heightEsp   the slot cut out of it
-```
-
-The tilt is the `rotate([15, 0, 0])` near the bottom. The comment on the
-translate above it notes that a `-8` variant was also built — that
-number sets how deep the board sits.
-
-Render with [OpenSCAD](https://openscad.org/):
-
-```sh
-openscad -o base-esp32-clock.stl base-esp32-clock.scad
-```
-
-## Licence
-
-Public domain, CC0 1.0 — [`LICENSE`](LICENSE). Use it, change it, print
-it, sell the prints; no permission and no credit needed. This is the one
-directory with no conditions on it at all: the firmware and scripts
-above are free software under the GNU GPL, version 3 or later
-([`../LICENSE`](../LICENSE)), which asks that what you pass on stays
-free too.
+[MakerWorld – Waveshare ESP32-P4 Smart 86 Parametric Stand](https://makerworld.com/en/models/3343293-waveshare-esp32-p4-smart-86-parametric-stand)
