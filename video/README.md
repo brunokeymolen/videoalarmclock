@@ -606,5 +606,5 @@ the right to use — your own footage, public-domain film, or anything
 licensed for it. What you point it at is your call.
 
 No responsibility is taken for what anyone converts or plays — see
-[`DISCLAIMER.md`](../DISCLAIMER.md). These scripts are under the
-noncommercial terms in [`LICENSE`](../LICENSE).
+[`DISCLAIMER.md`](../DISCLAIMER.md). These scripts are free software
+under the GNU GPL, version 3 or later ([`LICENSE`](../LICENSE)).

@@ -3,8 +3,9 @@
 This is a hobby project, published because it might be useful to
 somebody else. It is offered as is, with no warranty of any kind and no
 liability accepted for anything that follows from using it. The binding
-version of that is the **No Liability** section of [`LICENSE`](LICENSE);
-this file is the plain-language account of what it means in practice.
+version of that is sections 15 and 16 of [`LICENSE`](LICENSE) —
+*Disclaimer of Warranty* and *Limitation of Liability*; this file is the
+plain-language account of what they mean in practice.
 
 ## It is not a dependable alarm
 

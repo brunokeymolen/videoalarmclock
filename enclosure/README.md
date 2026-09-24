@@ -38,5 +38,7 @@ openscad -o base-esp32-clock.stl base-esp32-clock.scad
 
 Public domain, CC0 1.0 — [`LICENSE`](LICENSE). Use it, change it, print
 it, sell the prints; no permission and no credit needed. This is the one
-directory with no conditions on it: the firmware and scripts above are
-noncommercial ([`../LICENSE`](../LICENSE)).
+directory with no conditions on it at all: the firmware and scripts
+above are free software under the GNU GPL, version 3 or later
+([`../LICENSE`](../LICENSE)), which asks that what you pass on stays
+free too.

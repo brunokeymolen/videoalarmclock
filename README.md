@@ -563,6 +563,19 @@ will not boot at all — `firmware/flash.sh` still works, and
 
 ---
 
+## Build it yourself
+
+The complete firmware source, the ESP-IDF devcontainer, the test suites
+and the release scripts are in [`sources/`](sources/). Everything needed
+to build the firmware, put it on a board, watch it run and publish a new
+version is in there, and [`sources/README.md`](sources/README.md) is the
+one page that explains it.
+
+You do not need any of it to own one of these clocks — the installer
+above writes a released image without a toolchain.
+
+---
+
 ## Licence and copyright
 
 © 2026 Bruno Keymolen. The repository is under two licences.
@@ -572,13 +585,17 @@ will not boot at all — `firmware/flash.sh` still works, and
 ([`enclosure/LICENSE`](enclosure/LICENSE)). Print it, change it, sell the
 prints. No permission and no credit needed.
 
-**Everything else is free for noncommercial use.** The firmware, the
-scripts and the documentation are under the custom noncommercial terms in
-[LICENSE](LICENSE). Install it, experiment, use it at home, change it,
-pass it on — all of that is permitted. Selling
-it, selling clocks with it on them, or running a business on it needs a
-written agreement first. Ask, by opening an issue; the answer is not
-automatically no.
+**Everything else is free software under the GPL.** The firmware and its
+source, the installers, the video tooling and the documentation are
+under the **GNU General Public License, version 3** or (at your option)
+any later version — [LICENSE](LICENSE) is the full text. Install it,
+study it, change it, pass it on, build clocks with it. The one condition
+that matters: if you distribute it, or a device with it on, the people
+you give it to get the same freedoms and the source to go with it.
+
+Two parts inside [`sources/`](sources/) keep their own compatible terms
+— the vendored Espressif ES8311 driver (Apache-2.0) and the generated
+DejaVu fonts — each with the notice beside it.
 
 **There is no warranty, for the clock or for what you play on it.** It
 is a hobby project: do not rely on it as your only alarm for anything
