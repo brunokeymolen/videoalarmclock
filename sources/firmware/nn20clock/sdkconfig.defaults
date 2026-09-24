@@ -1,0 +1,163 @@
+# NN20Clock ESP32-P4 configuration.
+#
+# Every value here is taken from the Waveshare ESP32-P4-WIFI6-Touch-LCD-4B
+# examples in ~/coding-style-and-examples/esp32/ESP32-P4-WIFI6-Touch-LCD-4B
+# (08_lvgl_display_panel and 10_lvgl_demo_v9), which are known to run on
+# this board. Design 3 is explicit that hardware configuration must not be
+# copied from nn20vps, which is a different P4 board - so it is not.
+#
+# Milestone 2 added the LVGL, PSRAM, and Wi-Fi settings at the bottom of
+# this file. Wi-Fi *credentials* are not here and must never be: they
+# live in sdkconfig.defaults.local, which is git-ignored.
+
+CONFIG_IDF_TARGET="esp32p4"
+
+# --- silicon revision ---------------------------------------------------
+# This board carries a P4 revision v1.3 part. ESP-IDF 5.5 defaults to
+# building for revision v3.0 and up, and the bootloader then refuses to
+# flash: "requires chip revision in range [v3.1 - v3.99] (this chip is
+# revision v1.3)". Measured on the actual board, not guessed.
+#
+# The Waveshare examples do not set this because they were generated
+# against ESP-IDF 5.4, whose default minimum was lower. This is one of
+# the few settings nn20vps got right for a reason that does carry over:
+# it is a property of the silicon, not of the board.
+CONFIG_ESP32P4_SELECTS_REV_LESS_V3=y
+CONFIG_ESP32P4_REV_MIN_100=y
+
+# --- flash -------------------------------------------------------------
+# 32 MB NOR (design 2). The board examples set 16 MB and then override to
+# 32 MB further down their file; stated once and correctly here.
+CONFIG_ESPTOOLPY_FLASHMODE_QIO=y
+CONFIG_ESPTOOLPY_FLASHSIZE_32MB=y
+CONFIG_ESPTOOLPY_FLASHSIZE="32MB"
+# The board carries a GigaDevice part. Without this the flash chip is not
+# recognised and the 32 MB is not fully addressable.
+CONFIG_SPI_FLASH_SUPPORT_GD_CHIP=y
+
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+# The bootloader does not fit under the default 0x8000 table offset on this
+# configuration: PSRAM XIP and GigaDevice flash support push it to 0x60c0,
+# over the 0x6000 ceiling that 0x8000 implies. Measured, not guessed - the
+# build fails with the exact numbers if this is removed. 0x10000 leaves the
+# bootloader 56 KB, which is ample, and costs nothing on a 32 MB part.
+CONFIG_PARTITION_TABLE_OFFSET=0x10000
+
+# --- PSRAM -------------------------------------------------------------
+# 32 MB of it (design 2). The 720x720 framebuffers and decoded video
+# frames all live here, so it is enabled from the start rather than
+# retrofitted once something runs out of internal RAM.
+# XIP_FROM_PSRAM needs the experimental-features flag.
+CONFIG_IDF_EXPERIMENTAL_FEATURES=y
+CONFIG_SPIRAM=y
+CONFIG_SPIRAM_SPEED_200M=y
+CONFIG_SPIRAM_XIP_FROM_PSRAM=y
+
+# --- cache -------------------------------------------------------------
+CONFIG_CACHE_L2_CACHE_256KB=y
+CONFIG_CACHE_L2_CACHE_LINE_128B=y
+
+# --- FreeRTOS ----------------------------------------------------------
+# 1 kHz tick: the Timer is specified at one-second granularity (design 7)
+# but video playback later needs finer scheduling than the 100 Hz default.
+CONFIG_FREERTOS_HZ=1000
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=10240
+
+# Useful while bringing the board up; cheap to keep.
+CONFIG_FREERTOS_VTASKLIST_INCLUDE_COREID=y
+CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS=y
+
+CONFIG_COMPILER_OPTIMIZATION_PERF=y
+
+# --- LVGL (Milestone 2) -----------------------------------------------
+#
+# Fonts: the clock face uses Montserrat 20/28/48. Only the sizes that
+# are actually referenced are enabled - each one is flash.
+CONFIG_LV_FONT_MONTSERRAT_20=y
+CONFIG_LV_FONT_MONTSERRAT_28=y
+CONFIG_LV_FONT_MONTSERRAT_48=y
+
+# LVGL is called from exactly one thread, the UiWorker (design 11), so
+# it needs no OS integration of its own and no lock. Leaving LV_OS at
+# none is the configuration that matches the design.
+CONFIG_LV_OS_NONE=y
+
+# 15 ms refresh, matching the Waveshare LVGL example for this board.
+CONFIG_LV_DEF_REFR_PERIOD=15
+
+# The panel is RGB565 over MIPI-DSI.
+CONFIG_LV_COLOR_DEPTH_16=y
+CONFIG_LV_USE_CLIB_MALLOC=y
+CONFIG_LV_USE_CLIB_STRING=y
+CONFIG_LV_USE_CLIB_SPRINTF=y
+
+# --- PSRAM ------------------------------------------------------------
+#
+# The LVGL draw buffers live here; the panel and, later, the video path
+# need the internal heap more.
+CONFIG_SPIRAM=y
+CONFIG_SPIRAM_SPEED_200M=y
+CONFIG_SPIRAM_XIP_FROM_PSRAM=y
+CONFIG_CACHE_L2_CACHE_256KB=y
+CONFIG_CACHE_L2_CACHE_LINE_128B=y
+CONFIG_IDF_EXPERIMENTAL_FEATURES=y
+
+# --- heap debugging (Milestone 7, off since Milestone 11) --------------
+#
+# OFF. It was COMPREHENSIVE - every allocation given head and tail
+# canaries, freed memory filled with a pattern, both verified on every
+# heap operation - and it earned its place: a write past the end of a
+# heap block was found here the hard way, as a panic inside LVGL's glyph
+# allocation, minutes after the fact and nowhere near the cause.
+#
+# What turned it off was measuring what it cost. The heartbeat in
+# nn20clock_app_main.c calls heap_caps_check_integrity_all() every ten
+# seconds, and with comprehensive poisoning that walk verifies the
+# pattern in every block of every heap - including 31 MB of PSRAM. It
+# took a measured 220 ms, three times out of three, on a board doing
+# nothing else.
+#
+# 220 ms is not a debugging overhead during playback, it is a fault. The
+# I2S DMA holds 32.6 ms of audio, so the buffer empties and auto_clear
+# writes silence - an audible tick - and four frames never reach the
+# panel. Every ten seconds, for as long as a film runs.
+#
+# Design 17 Milestone 11 said this had to happen before playback
+# continuity could be measured. It was right, and this is that.
+#
+# The tripwire is not gone, only cheapened: heap_caps_check_integrity_all()
+# still walks the block headers and still catches a corrupted free list.
+# What it no longer catches is a small overrun that damages nothing but
+# the canary. If that bug comes back, turn this on for the hunt - it is
+# one line - rather than carrying the cost for the years it does not.
+CONFIG_HEAP_POISONING_DISABLED=y
+
+# --- OTA (design: About screen "check for updates") ---------------------
+#
+# The clock updates itself from a release published in the public
+# `videoalarm` repository. Three things have to be true for that to work.
+#
+# Rollback. The bootloader marks a freshly installed image "pending" and
+# reverts to the previous slot on the next boot unless the running
+# firmware calls esp_ota_mark_app_valid_cancel_rollback(). nn20clock_ota
+# makes that call from the app root, after every service has started - so
+# an image that panics during startup un-installs itself rather than
+# leaving a brick on somebody's bedside table.
+CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE=y
+
+# TLS trust. Both the manifest and the image come from GitHub over HTTPS,
+# and the device has to be able to verify the certificate chain without
+# a root store of its own. The bundle is compiled into the app.
+#
+# FULL rather than the default CMN: CMN is the top 34 roots, which does
+# cover GitHub today, but the download is redirected to a different host
+# than the one asked for and a firmware that stops updating because a CDN
+# changed CA is not a trade worth 64 KB of an 8 MB partition.
+CONFIG_MBEDTLS_CERTIFICATE_BUNDLE=y
+CONFIG_MBEDTLS_CERTIFICATE_BUNDLE_DEFAULT_FULL=y
+
+# Plaintext HTTP is refused outright. The manifest is what decides which
+# image the clock installs, so it is exactly the thing that must not be
+# fetched over a channel anyone on the path can rewrite.
+CONFIG_OTA_ALLOW_HTTP=n

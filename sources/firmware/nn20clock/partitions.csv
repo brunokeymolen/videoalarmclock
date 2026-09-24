@@ -1,0 +1,45 @@
+# NN20Clock partition table, 32 MB NOR flash (design 2).
+#
+# Based on the Waveshare board examples' layout
+# (08_lvgl_display_panel, 10_lvgl_demo_v9), with three changes.
+#
+# 1. Their 7 MB spiffs partition is dropped: design 9 puts settings in NVS
+#    and all media on the SD card, so there is nothing for an on-flash
+#    filesystem to hold.
+#
+# 2. Offsets are left blank so the partition tool places and aligns them.
+#    The examples hardcode nvs at 0x9000, which assumes the default
+#    0x8000 partition-table offset - and our bootloader does not fit under
+#    that. See CONFIG_PARTITION_TABLE_OFFSET in sdkconfig.defaults.
+#
+# 3. The single `factory` app partition became an OTA pair. The About
+#    screen can update the clock over the network, and that needs two app
+#    slots plus the `otadata` the bootloader reads to decide which one to
+#    run: the new image is written to the slot that is *not* running, and
+#    only becomes the boot choice once it has been downloaded whole and
+#    its SHA-256 matches what the release manifest promised.
+#
+#    There is deliberately no `factory` partition alongside them. A third
+#    slot would cost 8 MB to hold an image that never changes and is
+#    therefore oldest exactly when it is needed; with an OTA pair the
+#    fallback is the *previous* firmware, which is a far better thing to
+#    land on. CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE makes that automatic:
+#    an image that never reaches nn20clock_ota_mark_valid() is reverted on
+#    the next boot.
+#
+#    Moving from `factory` to `ota_0` changes the offset the application
+#    is flashed at, so the first build carrying this table has to go on
+#    over serial - see DISTRIBUTE.md. Every build after it can arrive
+#    over the air.
+#
+# 8 MB per app slot is the board examples' figure and is sized for what
+# lands later: LVGL, the MJPEG decode path, and a built-in fallback
+# alarm sound. Two of them plus the small data partitions come to about
+# 16 MB, leaving half the flash unallocated for a media cache.
+#
+# Name,     Type, SubType, Offset, Size, Flags
+nvs,        data, nvs,     ,       0x6000,
+otadata,    data, ota,     ,       0x2000,
+phy_init,   data, phy,     ,       0x1000,
+ota_0,      app,  ota_0,   ,       8M,
+ota_1,      app,  ota_1,   ,       8M,

@@ -1,0 +1,13 @@
+dependencies:
+  # The panel driver proven on this board in tryout/videoplayback.
+  waveshare/esp_lcd_st7703: "*"
+  # LVGL 9, the version the Waveshare 10_lvgl_demo_v9 example for this
+  # board is built against.
+  lvgl/lvgl:
+    version: "~9.2.0"
+    public: true
+  # GT911 capacitive touch, the controller on this board. The pins come
+  # from the Waveshare BSP; the driver itself is Espressif's.
+  espressif/esp_lcd_touch_gt911: "*"
+  idf:
+    version: ">=5.4.0"

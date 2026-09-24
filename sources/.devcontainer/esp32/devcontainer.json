@@ -1,0 +1,30 @@
+{
+  "name": "NN20Clock ESP-IDF",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "runArgs": [
+    "--privileged",
+    "--volume=/dev/bus/usb:/dev/bus/usb",
+    "--device-cgroup-rule=c 166:* rmw",
+    "--device-cgroup-rule=c 188:* rmw"
+  ],
+  "containerEnv": {
+    "LANG": "C.utf8",
+    "LC_ALL": "C.utf8"
+  },
+  "remoteEnv": {
+    "LANG": "C.utf8",
+    "LC_ALL": "C.utf8"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "espressif.esp-idf-extension",
+        "ms-vscode.cpptools",
+        "ms-vscode.makefile-tools"
+      ]
+    }
+  }
+}

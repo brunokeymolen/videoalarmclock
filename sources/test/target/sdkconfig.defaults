@@ -1,0 +1,19 @@
+# Overrides on top of firmware/nn20clock/sdkconfig.defaults, which this
+# project inherits (see CMakeLists.txt). Keep this file to the minimum:
+# anything set here is a way the test app differs from the firmware, and
+# every difference is a thing the on-target run is no longer proving.
+
+# The built-in single-app table gives 1.5 MB, and the test binary hit 95%
+# of it at Milestone 5: the suites link every component plus LVGL, the
+# generated fonts, and the Wi-Fi stack, so this binary grows faster than
+# the firmware itself. Overflowing would present as a confusing flashing
+# failure mid-milestone, so this project has its own table with room.
+#
+# It is deliberately not the firmware's table - that one describes the
+# product. See test/target/partitions.csv.
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+CONFIG_PARTITION_TABLE_OFFSET=0x10000
+
+# Tests print their results; make sure the output is not filtered out.
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y

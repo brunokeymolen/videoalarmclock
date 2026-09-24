@@ -1,0 +1,61 @@
+# Project configuration for the NN20Clock firmware.
+#
+# This must live in a component directory - ESP-IDF only scans components
+# for Kconfig.projbuild, so a copy at the project root is silently
+# ignored and every option below quietly takes its #ifndef fallback
+# instead. `main` is the right component: these are project-level
+# settings, not properties of any one component.
+#
+# Verify after changing anything here:
+#
+#   grep ^CONFIG_NN20CLOCK firmware/nn20clock/sdkconfig
+
+menu "NN20Clock"
+
+    menu "Wi-Fi"
+
+        #
+        # There is deliberately no SSID or password here.
+        #
+        # They lived in this menu until 2026-09-06, set from a
+        # git-ignored sdkconfig.defaults.local. Kconfig strings become
+        # .rodata, so a real network name and passphrase ended up inside
+        # every image - including the ones published as public release
+        # assets, where they are readable by anyone with `grep` and
+        # cannot be taken back.
+        #
+        # The network is chosen on the device instead: gear icon ->
+        # Wi-Fi, scanned and stored in NVS. A board with none joins
+        # nothing and runs on its RTC, which is the same behaviour an
+        # empty SSID had here.
+        #
+        config NN20CLOCK_WIFI_MAX_RETRY
+            int "Connection attempts before giving up"
+            default 5
+            range 1 20
+            help
+                A clock must keep working without a network, so the
+                connection is not retried forever. After this many
+                failures the Wi-Fi service reports failure and the clock
+                carries on with the time it has.
+
+    endmenu
+
+    menu "Time"
+
+        config NN20CLOCK_SNTP_SERVER
+            string "SNTP server"
+            default "pool.ntp.org"
+
+        config NN20CLOCK_TIMEZONE
+            string "POSIX timezone string"
+            default "CET-1CEST,M3.5.0,M10.5.0/3"
+            help
+                Applied to the system clock before any time is
+                displayed (design 14). The default is Europe/Brussels.
+                Design 9 makes this a stored setting; this is the value
+                used until storage can supply one (Milestone 3).
+
+    endmenu
+
+endmenu

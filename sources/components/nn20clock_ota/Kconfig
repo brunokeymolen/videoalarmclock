@@ -1,0 +1,30 @@
+# Where the clock looks for a newer version of itself.
+#
+# A component Kconfig rather than main's Kconfig.projbuild: this is a
+# property of the update component, not of the project, and putting it
+# here keeps the option next to the code that reads it.
+
+menu "NN20Clock updates"
+
+    config NN20CLOCK_OTA_MANIFEST_URL
+        string "Release manifest URL"
+        default "https://raw.githubusercontent.com/brunokeymolen/videoalarmclock/main/latest.json"
+        help
+            The JSON document naming the current release: its version,
+            one line of notes, the image URL, its size, and its SHA-256.
+            See nn20clock_ota.h for the shape.
+
+            It lives in the public `videoalarmclock` repository, which
+            holds no source - only the firmware binaries, the printable
+            base, and the container that converts and uploads video.
+
+            Must be https. The manifest decides which image the clock
+            installs, so it is exactly the thing that must not be
+            fetched over a channel anyone on the path can rewrite; the
+            component refuses a URL that is not, and so does the image
+            URL inside it.
+
+            An empty string turns the feature off: the About screen then
+            reports that this build has nowhere to check.
+
+endmenu

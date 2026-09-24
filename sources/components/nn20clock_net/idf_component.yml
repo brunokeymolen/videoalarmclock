@@ -1,0 +1,9 @@
+dependencies:
+  # Wi-Fi for a chip with no radio: esp_wifi_remote presents the normal
+  # esp_wifi API and forwards it to the ESP32-C6 over SDIO, with
+  # esp_hosted as the transport. Both come from the Waveshare
+  # 05_wifistation example for this board.
+  espressif/esp_hosted: "*"
+  espressif/esp_wifi_remote: "*"
+  idf:
+    version: ">=5.4.0"

@@ -1,0 +1,55 @@
+# Everything git must not carry out of sources/.
+#
+# This file covers sources/ only; the repository's top-level .gitignore
+# handles media and firmware images. Paths starting with "/" are
+# relative to this directory.
+
+# host build
+/build/
+/build-*/
+compile_commands.json
+
+# The generated sdkconfig.
+#
+# Written by the build from sdkconfig.defaults, and regenerated whenever
+# it is missing - so it is an artefact, not a source file. Matched by
+# bare filename, ignored at any depth, which covers firmware/, test/ and
+# anything added later.
+#
+# Note these are exact filenames, not prefixes: sdkconfig.defaults is a
+# different name and stays tracked. No negation rules here on purpose -
+# with "last match wins" they are how this kind of ignore file quietly
+# stops working.
+#
+# Verify after touching this file:
+#
+#   git check-ignore -v sources/firmware/nn20clock/sdkconfig
+#   git status --short      # must never list a generated sdkconfig
+sdkconfig
+sdkconfig.old
+
+# esp-idf
+#
+# managed_components/ and dependencies.lock are fetched by the component
+# manager on the first build, from the versions pinned in each
+# component's idf_component.yml.
+firmware/*/build/
+firmware/*/build-release/
+firmware/*/managed_components/
+firmware/*/dependencies.lock
+test/target/build/
+test/target/managed_components/
+test/target/dependencies.lock
+
+# Releases staged by release-scripts/prepare-release.sh. The manifest is
+# committed at the top of the repository by publish-release.sh and the
+# images are uploaded as release assets; a copy here would only be a
+# second, staler one - and prepare-release.sh refuses to build on an
+# unclean tree, so this has to be ignored for a release to be possible
+# at all.
+/dist/
+
+# editors / os
+.vscode/
+*.swp
+.DS_Store

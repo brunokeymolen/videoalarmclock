@@ -1,0 +1,18 @@
+# Partition table for the on-target test runner only.
+#
+# The built-in "single app, large" table gives 1.5 MB, and the test
+# binary reached 95% of it at Milestone 5 - the suites link every
+# component plus LVGL, the fonts, and the Wi-Fi stack, so it grows
+# faster than the firmware does. Running out mid-milestone would look
+# like a mysterious flashing failure, so the app partition is sized
+# generously here.
+#
+# This is NOT the product layout: firmware/nn20clock/partitions.csv is,
+# and it is deliberately different. The only thing this table has to do
+# is boot a test binary and give it an NVS partition to exercise
+# storage against.
+#
+# Name,     Type, SubType, Offset, Size, Flags
+nvs,        data, nvs,     ,       0x6000,
+phy_init,   data, phy,     ,       0x1000,
+factory,    app,  factory, ,       4M,
