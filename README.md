@@ -32,7 +32,7 @@ to own one:
 | --- | --- |
 | [`firmware/`](firmware/) | The firmware binaries and one-command installer |
 | [`video/`](video/) | A container that converts and uploads video files |
-| [`enclosure/`](enclosure/) | The printable bedside stand |
+| [`enclosure/`](enclosure/) | Where to get the printable bedside stand |
 
 Once the firmware is on, the clock updates itself over Wi-Fi: gear icon
 → **About** → **Check for updates**. You should only need the cable
@@ -247,10 +247,12 @@ tone. An alarm never goes silent.
 
 ## 5. Print the stand
 
-[`enclosure/`](enclosure/) has the STL and the OpenSCAD source it was
-generated from. It holds the board at a 15° tilt for a bedside table.
+The STL and the OpenSCAD source it was generated from are on MakerWorld:
+[Waveshare ESP32-P4 Smart 86 Parametric Stand](https://makerworld.com/en/models/3343293-waveshare-esp32-p4-smart-86-parametric-stand).
+It holds the board at a 15° tilt for a bedside table.
 
-See enclosure/README.md for design notes and attribution.
+See [`enclosure/README.md`](enclosure/README.md) for the link and a
+picture of it printed.
 
 ---
 
@@ -582,12 +584,13 @@ above writes a released image without a toolchain.
 
 © 2026 Bruno Keymolen. The repository is under two licences.
 
-**The stand is free, with no conditions at all.** [`enclosure/`](enclosure/)
-— the STL and the OpenSCAD source — is public domain under CC0 1.0
-([`enclosure/LICENSE`](enclosure/LICENSE)). Print it, change it, sell the
-prints. No permission and no credit needed.
+**The stand is published on MakerWorld, under the terms shown there.**
+Its STL and OpenSCAD source are not in this repository —
+[`enclosure/`](enclosure/) only points at the
+[model page](https://makerworld.com/en/models/3343293-waveshare-esp32-p4-smart-86-parametric-stand),
+and the licence on that page is the one that governs them.
 
-**Everything else is free software under the GPL.** The firmware and its
+**Everything in this repository is free software under the GPL.** The firmware and its
 source, the installers, the video tooling and the documentation are
 under the **GNU General Public License, version 3** or (at your option)
 any later version — [LICENSE](LICENSE) is the full text. Install it,
@@ -599,7 +602,8 @@ Two parts inside [`sources/`](sources/) keep their own compatible terms
 — the vendored Espressif ES8311 driver (Apache-2.0) and the generated
 DejaVu fonts — each with the notice beside it.
 
-**There is no warranty, for the clock or for what you play on it.** It
+**There is no warranty, for the clock or for what you play on it.** Although it 
+behaves very stable up to now, it still 
 is a hobby project: do not rely on it as your only alarm for anything
 that matters, and deciding what you have the right to convert and play
 is your responsibility, not the author's. [`DISCLAIMER.md`](DISCLAIMER.md)
