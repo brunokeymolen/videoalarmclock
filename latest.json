@@ -1,7 +1,7 @@
 {
-  "version": "v1.1.2",
-  "notes": "Minimum playback brightness setting.",
-  "url": "https://github.com/brunokeymolen/videoalarmclock/releases/download/v1.1.2/nn20clock-v1.1.2.bin",
-  "size": 1888208,
-  "sha256": "d88409f9598fed41a6678aea987e33038f9c55b05cf15a98a92236d6826b7a2e"
+  "version": "v1.1.3",
+  "notes": "Configurable timezone",
+  "url": "https://github.com/brunokeymolen/videoalarmclock/releases/download/v1.1.3/nn20clock-v1.1.3.bin",
+  "size": 1893280,
+  "sha256": "f2044b51d4f0f0e10b43dbb82832219a189b65a6a671c91bb711c0bc26398c41"
 }
