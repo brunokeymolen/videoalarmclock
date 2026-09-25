@@ -17,5 +17,6 @@ idf_component_register(
     REQUIRES nn20clock_platform nn20clock_ui nn20clock_manager
              nn20clock_storage nn20clock_net nn20clock_ota
     PRIV_REQUIRES nn20clock_display nn20clock_brightness nn20clock_alarm_ui
+                  nn20clock_timefmt
                   esp_app_format
 )

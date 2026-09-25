@@ -684,6 +684,39 @@ TEST(the_timezone_shifts_the_local_time)
     tick_fixture_down(&fixture);
 }
 
+/*
+ * A new zone moves the hour on the face without moving the instant, and
+ * a whole-hour zone does not even move the minute stamp - so without
+ * being told, the face would keep the old hour until the minute turned.
+ * Changing it on a running Timer must redraw at once, and must not
+ * count as the clock having been set.
+ */
+TEST(a_new_zone_redraws_at_once)
+{
+    TickFixture fixture;
+    tick_fixture_up(&fixture);
+    REQUIRE(fixture.timer != NULL);
+    REQUIRE(nn20clock_timer_start(fixture.timer) == ESP_OK);
+    REQUIRE(nn20clock_timer_flush(fixture.timer) == ESP_OK);
+
+    const int minutes_before = fixture.log.minutes;
+    poll_and_settle(&fixture);
+    CHECK_EQ(minutes_before, fixture.log.minutes);
+
+    REQUIRE(nn20clock_timer_set_timezone(fixture.timer,
+                                         "EST5EDT,M3.2.0,M11.1.0")
+            == ESP_OK);
+    poll_and_settle(&fixture);
+    CHECK_EQ(minutes_before + 1, fixture.log.minutes);
+    CHECK(!nn20clock_timer_is_time_synced(fixture.timer));
+
+    CHECK_EQ(ESP_ERR_INVALID_ARG,
+             nn20clock_timer_set_timezone(fixture.timer, ""));
+
+    (void)nn20clock_timer_set_timezone(fixture.timer, "UTC0");
+    tick_fixture_down(&fixture);
+}
+
 TEST(to_local_is_free_standing)
 {
     /* No Timer involved: the conversion reads the process timezone, so
@@ -1510,6 +1543,7 @@ TEST_MAIN("nn20clock_timer")
 
     RUN(get_now_returns_the_current_local_time);
     RUN(the_timezone_shifts_the_local_time);
+    RUN(a_new_zone_redraws_at_once);
     RUN(to_local_is_free_standing);
 
     RUN(the_schedule_is_loaded_from_the_alarm_source);

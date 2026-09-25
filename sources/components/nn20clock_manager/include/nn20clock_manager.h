@@ -404,6 +404,16 @@ typedef struct {
      */
     esp_err_t (*set_time)(void *ctx, time_t when);
 
+    /*
+     * Move the clock to another time zone now: a POSIX TZ string, as
+     * nn20clock_timezones.h lists them. Storing it is save_config's
+     * job, exactly as with the sync switch.
+     *
+     * Not a hook: the zone lives in the Timer, which the manager
+     * already holds, so this works in the headless build too.
+     */
+    esp_err_t (*set_timezone)(void *ctx, const char *posix_tz);
+
     void *ctx;
 } NN20ClockDeviceService;
 

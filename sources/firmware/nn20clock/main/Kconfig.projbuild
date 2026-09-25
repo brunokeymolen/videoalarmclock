@@ -51,10 +51,11 @@ menu "NN20Clock"
             string "POSIX timezone string"
             default "CET-1CEST,M3.5.0,M10.5.0/3"
             help
-                Applied to the system clock before any time is
-                displayed (design 14). The default is Europe/Brussels.
-                Design 9 makes this a stored setting; this is the value
-                used until storage can supply one (Milestone 3).
+                A fallback only. The timezone is a stored setting,
+                chosen under Settings > Time (design 9, 14), and a
+                never-configured clock starts on Europe/Brussels. This
+                is applied instead only when storage cannot be read or
+                holds no timezone.
 
     endmenu
 

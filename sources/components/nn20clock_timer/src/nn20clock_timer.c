@@ -556,15 +556,10 @@ esp_err_t nn20clock_timer_set_clock_fn(NN20ClockTimer *pthis,
     return ESP_OK;
 }
 
-esp_err_t nn20clock_timer_set_timezone(NN20ClockTimer *pthis, const char *tz)
+/* Process-wide, not per-Timer: localtime_r reads the process timezone,
+ * and design 14 wants one timezone applied consistently everywhere. */
+static esp_err_t apply_timezone(const char *tz)
 {
-    if (pthis == NULL || tz == NULL) {
-        return ESP_ERR_INVALID_ARG;
-    }
-
-    /* Process-wide, not per-Timer: localtime_r reads the process
-     * timezone, and design 14 wants one timezone applied consistently
-     * everywhere. */
     if (setenv("TZ", tz, 1) != 0) {
         ESP_LOGE(TAG, "cannot set TZ to '%s'", tz);
         return ESP_FAIL;
@@ -572,6 +567,58 @@ esp_err_t nn20clock_timer_set_timezone(NN20ClockTimer *pthis, const char *tz)
     tzset();
     ESP_LOGI(TAG, "timezone %s", tz);
     return ESP_OK;
+}
+
+typedef struct {
+    NN20ClockTimer *timer;
+    const char *tz;
+    esp_err_t result;
+} TimezoneRequest;
+
+/*
+ * Runs on the worker, so the Timer's own conversions - the ones that
+ * decide when an alarm rings - never see the zone half changed.
+ *
+ * A new zone moves the local clock by hours without the instant moving
+ * at all, so it is treated like a correction: the face is told at once,
+ * because the minute stamp need not change and nothing else would, and
+ * the baseline is dropped so the jump is not read as elapsed time. It
+ * does not make the clock synced - the instant is exactly as right or
+ * as wrong as it was.
+ */
+static int timezone_private(nn20_worker_ctx *worker, void *user_data)
+{
+    (void)worker;
+    TimezoneRequest *request = user_data;
+    NN20ClockTimer *pthis = request->timer;
+
+    request->result = apply_timezone(request->tz);
+    if (request->result == ESP_OK) {
+        pthis->force_emit = true;
+        pthis->last.valid = false;
+    }
+    return 0;
+}
+
+esp_err_t nn20clock_timer_set_timezone(NN20ClockTimer *pthis, const char *tz)
+{
+    if (pthis == NULL || tz == NULL || tz[0] == '\0') {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    /* Synchronous: the settings screen redraws straight after, and must
+     * draw in the zone it just chose. */
+    TimezoneRequest request = { .timer = pthis, .tz = tz, .result = ESP_FAIL };
+    const esp_err_t posted = post_result(
+        nn20_worker_post_sync(pthis->worker, timezone_private, &request));
+    if (posted == ESP_ERR_INVALID_STATE) {
+        /* The worker has stopped: nobody to race with. */
+        return apply_timezone(tz);
+    }
+    if (posted != ESP_OK) {
+        return posted;
+    }
+    return request.result;
 }
 
 #if defined(ESP_PLATFORM)

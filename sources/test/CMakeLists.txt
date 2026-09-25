@@ -35,3 +35,7 @@ foreach(suite ${NN20CLOCK_TEST_SUITES})
 
     add_test(NAME ${suite} COMMAND test_${suite})
 endforeach()
+
+# The zone list is checked against the storage default it has to contain,
+# so this one suite reaches one component further than its own.
+target_link_libraries(test_nn20clock_timefmt PRIVATE nn20clock_storage)

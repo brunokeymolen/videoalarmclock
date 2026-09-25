@@ -26,7 +26,14 @@
  */
 #include "test_util.h"
 
+#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+
 #include "nn20clock_timefmt.h"
+#include "nn20clock_timezones.h"
+#include "nn20clock_storage.h"
 
 static NN20ClockDateTime at(uint8_t hour, uint8_t minute)
 {
@@ -127,6 +134,132 @@ TEST(weekday_zero_is_monday)
     CHECK_STR_EQ("---", nn20clock_timefmt_weekday(255));
 }
 
+/* ------------------------------------------------------ time zones -- */
+
+/* 2026-01-15 and 2026-07-15, both 12:00 UTC: one in each half of the
+ * year, whichever hemisphere a zone is in. */
+#define MID_JANUARY 1768478400
+#define MID_JULY    1784116800
+
+/* Minutes east of UTC at `when`, in whatever zone TZ says. Worked out
+ * from the two broken-down times rather than tm_gmtoff, which is not
+ * standard C. */
+static int offset_at(time_t when)
+{
+    struct tm utc;
+    struct tm local;
+    if (gmtime_r(&when, &utc) == NULL || localtime_r(&when, &local) == NULL) {
+        return 99999;
+    }
+    int days = local.tm_yday - utc.tm_yday;
+    if (local.tm_year != utc.tm_year) {
+        days = (local.tm_year > utc.tm_year) ? 1 : -1;
+    }
+    return days * 1440 + (local.tm_hour - utc.tm_hour) * 60 +
+           (local.tm_min - utc.tm_min);
+}
+
+static void use_tz(const char *tz)
+{
+    setenv("TZ", tz, 1);
+    tzset();
+}
+
+/*
+ * Every string on the list is what it says it is.
+ *
+ * A mistyped TZ string does not fail: libc quietly treats it as UTC, so
+ * the only way to catch one is to ask it for its offsets. Standard time
+ * is the smaller of the two, whichever half of the year it falls in,
+ * and a zone has a second, larger offset exactly when it has a rule.
+ */
+TEST(every_zone_has_the_offset_it_claims)
+{
+    const size_t count = nn20clock_timezones_count();
+    REQUIRE(count > 0u);
+
+    for (size_t i = 0; i < count; i++) {
+        const NN20ClockTimezone *zone = nn20clock_timezones_at(i);
+        REQUIRE(zone != NULL);
+        CHECK(strlen(zone->posix) < NN20CLOCK_TIMEZONE_MAX);
+
+        use_tz(zone->posix);
+        const int january = offset_at(MID_JANUARY);
+        const int july = offset_at(MID_JULY);
+        const int standard = (january < july) ? january : july;
+        const bool has_rule = (strchr(zone->posix, ',') != NULL);
+
+        if (standard != zone->utc_offset_minutes) {
+            printf("  %s (%s): standard %d, claims %d\n", zone->name,
+                   zone->posix, standard, (int)zone->utc_offset_minutes);
+        }
+        CHECK_EQ(zone->utc_offset_minutes, standard);
+        CHECK_EQ(has_rule, january != july);
+
+        /* West to east, so the screen's list reads like any other. */
+        if (i > 0u) {
+            CHECK(nn20clock_timezones_at(i - 1u)->utc_offset_minutes <=
+                  zone->utc_offset_minutes);
+        }
+    }
+    CHECK(nn20clock_timezones_at(count) == NULL);
+
+    use_tz("UTC0");
+}
+
+/* The zone a US build was first asked about: the change is on the
+ * second Sunday of March at 02:00 local, which is 07:00 UTC. */
+TEST(new_york_changes_on_the_right_morning)
+{
+    const NN20ClockTimezone *zone =
+        nn20clock_timezones_find("EST5EDT,M3.2.0,M11.1.0");
+    REQUIRE(zone != NULL);
+
+    use_tz(zone->posix);
+    CHECK_EQ(-300, offset_at((time_t)1772953200 - 1));
+    CHECK_EQ(-240, offset_at((time_t)1772953200));
+    use_tz("UTC0");
+}
+
+/*
+ * A clock that has never been configured stores the storage default,
+ * and the picker has to find it - or the one screen meant to show the
+ * zone would open on none at all.
+ */
+TEST(the_storage_default_is_on_the_list)
+{
+    NN20ClockConfig defaults;
+    REQUIRE(nn20clock_storage_default_config(&defaults) == ESP_OK);
+
+    const NN20ClockTimezone *zone = nn20clock_timezones_find(defaults.timezone);
+    REQUIRE(zone != NULL);
+    CHECK_EQ(60, zone->utc_offset_minutes);
+
+    CHECK(nn20clock_timezones_find("Mars/Olympus_Mons") == NULL);
+    CHECK(nn20clock_timezones_find(NULL) == NULL);
+}
+
+TEST(offsets_read_as_people_write_them)
+{
+    char out[NN20CLOCK_UTC_OFFSET_SIZE];
+
+    CHECK_EQ(ESP_OK, nn20clock_timezones_format_offset(0, out, sizeof(out)));
+    CHECK_STR_EQ("UTC", out);
+    CHECK_EQ(ESP_OK, nn20clock_timezones_format_offset(-300, out,
+                                                       sizeof(out)));
+    CHECK_STR_EQ("UTC-5", out);
+    CHECK_EQ(ESP_OK, nn20clock_timezones_format_offset(330, out, sizeof(out)));
+    CHECK_STR_EQ("UTC+5:30", out);
+    CHECK_EQ(ESP_OK, nn20clock_timezones_format_offset(-210, out,
+                                                       sizeof(out)));
+    CHECK_STR_EQ("UTC-3:30", out);
+
+    CHECK_EQ(ESP_ERR_INVALID_ARG,
+             nn20clock_timezones_format_offset(0, out, sizeof(out) - 1u));
+    CHECK_EQ(ESP_ERR_INVALID_ARG,
+             nn20clock_timezones_format_offset(0, NULL, sizeof(out)));
+}
+
 TEST_MAIN("nn20clock_timefmt")
 {
     RUN(hhmm_is_zero_padded_and_24_hour);
@@ -134,4 +267,8 @@ TEST_MAIN("nn20clock_timefmt")
     RUN(hhmm_rejects_a_short_buffer);
     RUN(the_date_is_iso_ordered);
     RUN(weekday_zero_is_monday);
+    RUN(every_zone_has_the_offset_it_claims);
+    RUN(new_york_changes_on_the_right_morning);
+    RUN(the_storage_default_is_on_the_list);
+    RUN(offsets_read_as_people_write_them);
 }

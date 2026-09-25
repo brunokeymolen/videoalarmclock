@@ -37,6 +37,7 @@
 #include "nn20clock_ota.h"
 #include "nn20clock_brightness.h"
 #include "nn20clock_display.h"
+#include "nn20clock_timezones.h"
 #include "lvgl.h"
 
 static const char *TAG = "NN20CLOCK_DEVICE_UI";
@@ -75,6 +76,7 @@ typedef enum {
     VIEW_BRIGHTNESS,
     VIEW_VOLUME,
     VIEW_TIME,
+    VIEW_TIMEZONE,
     VIEW_ABOUT
 } View;
 
@@ -149,6 +151,7 @@ typedef struct {
 static void show_menu(DeviceUi *ui);
 static void show_networks(DeviceUi *ui);
 static void show_time(DeviceUi *ui);
+static void show_timezones(DeviceUi *ui);
 static void show_about(DeviceUi *ui);
 
 /* ---------------------------------------------------------- helpers -- */
@@ -540,9 +543,16 @@ static void show_menu(DeviceUi *ui)
      * only opens when it has not - which is why it is last rather than
      * first.
      */
-    char time_value[64];
+    char time_value[96];
     if (ui->config.ntp_enabled) {
-        snprintf(time_value, sizeof(time_value), "set from the internet");
+        /* The zone beside it: a clock set from the internet is only as
+         * right as the zone it converts into, and this is where somebody
+         * who moved house would look. */
+        const NN20ClockTimezone *zone =
+            nn20clock_timezones_find(ui->config.timezone);
+        snprintf(time_value, sizeof(time_value),
+                 "set from the internet - %s",
+                 (zone != NULL) ? zone->name : ui->config.timezone);
     } else {
         const time_t now = time(NULL);
         struct tm local = {0};
@@ -1614,6 +1624,7 @@ static void show_about(DeviceUi *ui)
 #define YEAR_COUNT   26u      /* 2025..2050, which outlives the hardware */
 
 static void show_time(DeviceUi *ui);
+static void add_timezone_row(DeviceUi *ui);
 
 /* "01\n02\n...\nN" - the roller wants one string with newlines. */
 static void number_options(char *out, size_t size, unsigned first,
@@ -1769,6 +1780,8 @@ static void show_time(DeviceUi *ui)
     lv_obj_add_event_cb(ui->ntp_switch, on_ntp_toggled, LV_EVENT_VALUE_CHANGED,
                         ui);
 
+    add_timezone_row(ui);
+
     if (ui->config.ntp_enabled) {
         /* Nothing else to offer: the rollers would be a control that
          * does nothing, since the next sync would undo it. */
@@ -1865,6 +1878,189 @@ static void show_time(DeviceUi *ui)
                                LV_PART_MAIN);
     lv_obj_set_style_text_color(apply_label, lv_color_black(), LV_PART_MAIN);
     lv_obj_center(apply_label);
+}
+
+/* ---------------------------------------------------------- time zone -- */
+
+/*
+ * The zone, as somebody would say it: "UTC-5  New York, Toronto".
+ *
+ * A zone that is not on the list - set some other way, the Kconfig
+ * fallback say - is shown as the raw string rather than as whichever
+ * city happens to share its offset. It is the truth, and it is what
+ * somebody debugging it would want to read.
+ */
+static void timezone_text(const char *posix, char *out, size_t size)
+{
+    const NN20ClockTimezone *zone = nn20clock_timezones_find(posix);
+    if (zone == NULL) {
+        snprintf(out, size, "%s", (posix[0] != '\0') ? posix : "not set");
+        return;
+    }
+
+    char offset[NN20CLOCK_UTC_OFFSET_SIZE];
+    (void)nn20clock_timezones_format_offset(zone->utc_offset_minutes, offset,
+                                            sizeof(offset));
+    snprintf(out, size, "%s  %s", offset, zone->name);
+}
+
+static void on_open_timezones(lv_event_t *event)
+{
+    show_timezones((DeviceUi *)lv_event_get_user_data(event));
+}
+
+/*
+ * The zone row on the Time screen, drawn like the switch row above it
+ * rather than like a menu row: the two sit together and are one subject.
+ *
+ * Shown whether or not the clock syncs. It matters most when it does -
+ * the internet supplies the instant and this turns it into the hour on
+ * the face - but a hand-set clock needs it too, because daylight saving
+ * comes from here.
+ */
+static void add_timezone_row(DeviceUi *ui)
+{
+    lv_obj_t *row = lv_obj_create(ui->body);
+    lv_obj_set_size(row, LV_PCT(100), ROW_HEIGHT);
+    lv_obj_set_style_flex_grow(row, 0, LV_PART_MAIN);
+    lv_obj_set_style_bg_color(row, COLOR_SURFACE, LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(row, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_set_style_border_width(row, 0, LV_PART_MAIN);
+    lv_obj_set_style_radius(row, 16, LV_PART_MAIN);
+    lv_obj_set_style_pad_all(row, 16, LV_PART_MAIN);
+    lv_obj_remove_flag(row, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(row, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(row, on_open_timezones, LV_EVENT_CLICKED, ui);
+
+    lv_obj_t *title = lv_label_create(row);
+    lv_label_set_text(title, "Time zone");
+    lv_obj_set_style_text_font(title, &nn20clock_font_ui_bold_28,
+                               LV_PART_MAIN);
+    lv_obj_set_style_text_color(title, COLOR_TEXT, LV_PART_MAIN);
+    lv_obj_align(title, LV_ALIGN_TOP_LEFT, 0, 0);
+
+    char value[NN20CLOCK_TIMEZONE_MAX + 48];
+    timezone_text(ui->config.timezone, value, sizeof(value));
+
+    lv_obj_t *label = lv_label_create(row);
+    lv_label_set_text(label, value);
+    lv_label_set_long_mode(label, LV_LABEL_LONG_DOT);
+    lv_obj_set_width(label, LV_PCT(90));
+    lv_obj_set_style_text_font(label, &lv_font_montserrat_28, LV_PART_MAIN);
+    lv_obj_set_style_text_color(label, COLOR_TEXT, LV_PART_MAIN);
+    lv_obj_align(label, LV_ALIGN_BOTTOM_LEFT, 0, 0);
+
+    lv_obj_t *chevron = lv_label_create(row);
+    lv_label_set_text(chevron, LV_SYMBOL_RIGHT);
+    lv_obj_set_style_text_font(chevron, &lv_font_montserrat_28,
+                               LV_PART_MAIN);
+    lv_obj_set_style_text_color(chevron, COLOR_MUTED, LV_PART_MAIN);
+    lv_obj_align(chevron, LV_ALIGN_RIGHT_MID, 0, 0);
+}
+
+static void on_back_to_time(lv_event_t *event)
+{
+    show_time((DeviceUi *)lv_event_get_user_data(event));
+}
+
+/*
+ * A zone was chosen: applied, stored, and back to the Time screen.
+ *
+ * Applied first and stored only if that worked, the reverse of Wi-Fi:
+ * a zone the clock could not take is not one to come back to after a
+ * restart. Once applied, the face is already in the new zone - the
+ * Timer tells every screen the moment it changes.
+ */
+static void on_timezone_chosen(lv_event_t *event)
+{
+    DeviceUi *ui = lv_event_get_user_data(event);
+    lv_obj_t *row = lv_event_get_target(event);
+    const NN20ClockTimezone *zone =
+        nn20clock_timezones_at((size_t)(uintptr_t)lv_obj_get_user_data(row));
+
+    if (zone == NULL || ui->service.set_timezone == NULL) {
+        return;
+    }
+    if (ui->service.set_timezone(ui->service.ctx, zone->posix) != ESP_OK) {
+        ESP_LOGE(TAG, "could not change the time zone to %s", zone->name);
+        return;
+    }
+
+    snprintf(ui->config.timezone, sizeof(ui->config.timezone), "%s",
+             zone->posix);
+    if (ui->service.save_config(ui->service.ctx, &ui->config) != ESP_OK) {
+        ESP_LOGE(TAG, "could not store the time zone");
+    }
+    ESP_LOGI(TAG, "time zone set to %s", zone->name);
+
+    show_time(ui);
+}
+
+/*
+ * Every zone on the list, west to east, the current one in the accent
+ * and scrolled into view - a list of thirty-odd rows that opens at the
+ * top is a list that makes everyone east of Halifax scroll to find
+ * where they already are.
+ */
+static void show_timezones(DeviceUi *ui)
+{
+    clear_view(ui);
+    ui->view = make_view(ui, "Time zone", on_back_to_time);
+    if (ui->view == NULL) {
+        return;
+    }
+
+    lv_obj_t *current = NULL;
+    const size_t count = nn20clock_timezones_count();
+
+    for (size_t i = 0; i < count; i++) {
+        const NN20ClockTimezone *zone = nn20clock_timezones_at(i);
+        const bool chosen = (strcmp(zone->posix, ui->config.timezone) == 0);
+
+        lv_obj_t *row = lv_obj_create(ui->body);
+        lv_obj_set_size(row, LV_PCT(100), 88);
+        lv_obj_set_style_flex_grow(row, 0, LV_PART_MAIN);
+        lv_obj_set_style_bg_color(row, COLOR_SURFACE, LV_PART_MAIN);
+        lv_obj_set_style_bg_opa(row, LV_OPA_COVER, LV_PART_MAIN);
+        lv_obj_set_style_border_width(row, 0, LV_PART_MAIN);
+        lv_obj_set_style_radius(row, 16, LV_PART_MAIN);
+        lv_obj_set_style_pad_all(row, 16, LV_PART_MAIN);
+        lv_obj_remove_flag(row, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_add_flag(row, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_set_user_data(row, (void *)(uintptr_t)i);
+        lv_obj_add_event_cb(row, on_timezone_chosen, LV_EVENT_CLICKED, ui);
+
+        lv_obj_t *name = lv_label_create(row);
+        lv_label_set_text(name, zone->name);
+        lv_label_set_long_mode(name, LV_LABEL_LONG_DOT);
+        lv_obj_set_width(name, LV_PCT(72));
+        lv_obj_set_style_text_font(name, &lv_font_montserrat_28,
+                                   LV_PART_MAIN);
+        lv_obj_set_style_text_color(name, chosen ? COLOR_ACCENT : COLOR_TEXT,
+                                    LV_PART_MAIN);
+        lv_obj_align(name, LV_ALIGN_LEFT_MID, 0, 0);
+
+        char offset[NN20CLOCK_UTC_OFFSET_SIZE];
+        (void)nn20clock_timezones_format_offset(zone->utc_offset_minutes,
+                                                offset, sizeof(offset));
+        lv_obj_t *utc = lv_label_create(row);
+        lv_label_set_text(utc, offset);
+        lv_obj_set_style_text_font(utc, &lv_font_montserrat_28,
+                                   LV_PART_MAIN);
+        lv_obj_set_style_text_color(utc, chosen ? COLOR_ACCENT : COLOR_MUTED,
+                                    LV_PART_MAIN);
+        lv_obj_align(utc, LV_ALIGN_RIGHT_MID, 0, 0);
+
+        if (chosen) {
+            current = row;
+        }
+    }
+
+    if (current != NULL) {
+        /* Positions exist only once the flex layout has run. */
+        lv_obj_update_layout(ui->view);
+        lv_obj_scroll_to_view(current, LV_ANIM_OFF);
+    }
 }
 
 /* ------------------------------------------------------------ volume -- */

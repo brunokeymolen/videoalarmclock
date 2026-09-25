@@ -43,6 +43,7 @@
 #include "nn20clock_manager.h"
 
 #include <stdlib.h>
+#include <time.h>
 
 /* Barrier: see the same helper in test_nn20clock_storage.c. */
 static int barrier_cb(nn20_worker_ctx *worker, void *user_data)
@@ -1831,6 +1832,17 @@ TEST(the_device_service_without_hooks_says_so)
     /* Storage still works: it is not hardware. */
     NN20ClockConfig config;
     CHECK_EQ(ESP_OK, service.load_config(service.ctx, &config));
+
+    /* Nor is the time zone: it lives in the Timer, so the headless
+     * build can change it too. */
+    CHECK_EQ(ESP_OK, service.set_timezone(service.ctx,
+                                          "EST5EDT,M3.2.0,M11.1.0"));
+    const time_t mid_january = 1768478400;   /* 2026-01-15 12:00 UTC */
+    struct tm local;
+    REQUIRE(localtime_r(&mid_january, &local) != NULL);
+    CHECK_EQ(7, local.tm_hour);
+    CHECK_EQ(ESP_ERR_INVALID_ARG, service.set_timezone(service.ctx, ""));
+    CHECK_EQ(ESP_OK, service.set_timezone(service.ctx, "UTC0"));
 
     CHECK_EQ(ESP_ERR_INVALID_ARG,
              nn20clock_manager_set_device_hooks(NULL,

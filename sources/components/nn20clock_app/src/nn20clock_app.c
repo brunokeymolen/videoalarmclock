@@ -1703,10 +1703,28 @@ static int start_private(nn20_worker_ctx *worker, void *user_data)
     }
     err = ESP_OK;
 
-    /* Design 14: one timezone, applied before any time is displayed.
-     * Milestone 3 takes this from storage instead of Kconfig. */
-    (void)nn20clock_timer_set_timezone(pthis->timer,
-                                       CONFIG_NN20CLOCK_TIMEZONE);
+    /*
+     * Design 14: one timezone, applied before any time is displayed.
+     *
+     * The stored one, which the settings screen chooses. Kconfig is only
+     * for a storage that will not answer or holds nothing: a clock that
+     * cannot read its settings should still show the builder's local
+     * time rather than UTC.
+     */
+    {
+        NN20ClockConfig tz_config;
+        const bool stored =
+            nn20clock_storage_load_config(pthis->storage, &tz_config) ==
+                ESP_OK &&
+            tz_config.timezone[0] != '\0';
+        if (!stored ||
+            nn20clock_timer_set_timezone(pthis->timer, tz_config.timezone) !=
+                ESP_OK) {
+            ESP_LOGW(TAG, "no stored timezone; using the build's");
+            (void)nn20clock_timer_set_timezone(pthis->timer,
+                                               CONFIG_NN20CLOCK_TIMEZONE);
+        }
+    }
 #endif
 
     /*

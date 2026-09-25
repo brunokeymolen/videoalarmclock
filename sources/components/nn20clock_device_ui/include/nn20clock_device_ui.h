@@ -40,6 +40,8 @@
  *   volume       stored only. There is no audio path until the video
  *                alarm milestone, so the screen says so rather than
  *                pretending.
+ *   time zone    real. Picked from nn20clock_timezones.h under Time,
+ *                applied at once and stored; the face follows it.
  *   updates      real. The About view checks for a newer release and
  *                installs it; see nn20clock_ota.h for what it talks to.
  *

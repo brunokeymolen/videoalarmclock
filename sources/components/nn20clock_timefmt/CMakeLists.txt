@@ -1,9 +1,10 @@
-# Formatting a time into the text a screen draws. Dual-mode: the screen
-# needs LVGL and is firmware-only, but this does not and is tested on the
-# host in seconds.
+# Formatting a time into the text a screen draws, and the time zones the
+# settings screen offers. Dual-mode: the screens need LVGL and are
+# firmware-only, but this does not and is tested on the host in seconds.
 
 set(TIMEFMT_SRCS
     src/nn20clock_timefmt.c
+    src/nn20clock_timezones.c
 )
 
 if(ESP_PLATFORM)

@@ -216,8 +216,14 @@ esp_err_t nn20clock_timer_set_clock_fn(NN20ClockTimer *pthis,
  * local time uses it. Call it before _start() so the first tick is
  * already correct.
  *
- * Design 9 stores the timezone; until storage can supply one
- * (Milestone 3) the value comes from Kconfig.
+ * Safe while running, from any thread but the Timer's own: the zone is
+ * changed on the Timer's worker, and the next poll reports the time
+ * even if the minute has not turned, because a new zone moves the
+ * local clock without moving the instant. Waits for that to happen.
+ *
+ * The zone comes from storage (design 9); see nn20clock_timezones.h for
+ * the ones the settings screen offers. ESP_ERR_INVALID_ARG on NULL or
+ * an empty string.
  */
 esp_err_t nn20clock_timer_set_timezone(NN20ClockTimer *pthis, const char *tz);
 

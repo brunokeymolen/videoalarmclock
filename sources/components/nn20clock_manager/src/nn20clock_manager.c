@@ -1181,6 +1181,15 @@ static esp_err_t device_service_set_time(void *ctx, time_t when)
     return pthis->device_hooks.set_time(pthis->device_hooks.ctx, when);
 }
 
+static esp_err_t device_service_set_timezone(void *ctx, const char *posix_tz)
+{
+    NN20ClockManager *pthis = ctx;
+    if (pthis->timer == NULL) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    return nn20clock_timer_set_timezone(pthis->timer, posix_tz);
+}
+
 esp_err_t nn20clock_manager_set_device_hooks(NN20ClockManager *pthis,
                                              NN20ClockDeviceHooks hooks)
 {
@@ -1207,6 +1216,7 @@ NN20ClockDeviceService nn20clock_manager_device_service(
         .connect_wifi = device_service_connect,
         .set_ntp = device_service_set_ntp,
         .set_time = device_service_set_time,
+        .set_timezone = device_service_set_timezone,
         .ctx = pthis,
     };
     return service;
