@@ -1,0 +1,5 @@
+dependencies:
+  espressif/esp_hosted: "==3.0.7"
+  espressif/esp_wifi_remote: "==1.6.5"
+  idf:
+    version: ">=5.5"

@@ -1,0 +1,6 @@
+dependencies:
+  # Keep in step with the esp_hosted version the clock resolves (see
+  # firmware/nn20clock/dependencies.lock after a build).
+  espressif/esp_hosted: "==3.0.7"
+  idf:
+    version: ">=5.5"

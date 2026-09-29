@@ -1,0 +1,2 @@
+# Applied after firmware/nn20clock/sdkconfig.defaults.
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="../nn20clock/partitions.csv"

@@ -936,10 +936,11 @@ static NN20ClockUiBase *screen_factory(NN20ClockManagerState state,
     switch (state) {
     case NN20CLOCK_STATE_TIME:
         /* The player is passed for one thing: the frame a snoozed alarm
-         * was interrupted on, shown in the corner while it waits. */
+         * was interrupted on, shown in the corner while it waits. The
+         * card only so the face can say when there is none. */
         return nn20clock_time_ui_ctor(ui_worker, pthis->manager,
                                       nn20clock_manager_handle_ui_command,
-                                      pthis->player);
+                                      pthis->player, pthis->sd);
 
     case NN20CLOCK_STATE_ALARM_SETTINGS:
         /* The screen edits alarms through the manager's service rather

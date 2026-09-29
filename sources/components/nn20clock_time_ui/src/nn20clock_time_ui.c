@@ -57,8 +57,8 @@ static const char *TAG = "NN20CLOCK_TIME_UI";
 #define COLOR_DATE    lv_color_hex(0x4A6A85)
 #define COLOR_STATUS  lv_color_hex(0x3A5468)
 
-/* Neither true nor false: nothing has been rendered yet. */
-#define SYNC_UNKNOWN (-1)
+/* Room for every status line this screen writes, joined. */
+#define STATUS_SIZE 48
 
 /*
  * Below this year the clock has clearly never been set - a board with no
@@ -100,6 +100,7 @@ typedef struct {
      * descriptor points into the player's buffer and is filled in once
      * the player says there is a picture. */
     NN20ClockPlayer *player;      /* borrowed; may be NULL */
+    NN20ClockSd *sd;              /* borrowed; NULL reads as no card */
     lv_obj_t *snooze_box;
     lv_obj_t *snooze_image;
     lv_obj_t *snooze_glyph;
@@ -115,13 +116,14 @@ typedef struct {
      * re-rendering is worth the two comparisons. */
     char shown_time[NN20CLOCK_HHMM_SIZE];
     char shown_date[NN20CLOCK_DATE_SIZE];
-    /* Tri-state: SYNC_UNKNOWN until the first event, so the status line
-     * is written even when the first reading is "not synced". */
-    int shown_synced;
+    /* Empty is a real value ("nothing to say"), so this is only
+     * trusted once shown_status_valid says the first event wrote it. */
+    char shown_status[STATUS_SIZE];
+    bool shown_status_valid;
 } TimeUi;
 
 /* Runs on the UiWorker. */
-static void render(TimeUi *ui, const NN20ClockDateTime *now, bool synced)
+static void render(TimeUi *ui, const NN20ClockDateTime *now)
 {
     /*
      * A time from an unset clock is not worth drawing. Showing
@@ -161,14 +163,35 @@ static void render(TimeUi *ui, const NN20ClockDateTime *now, bool synced)
         snprintf(ui->shown_date, sizeof(ui->shown_date), "%s", date);
     }
 
-    if ((int)synced != ui->shown_synced) {
-        /*
-         * Saying so matters: until NTP lands the displayed time is
-         * whatever the RTC believed, and an alarm clock that is
-         * silently hours out is worse than one that admits it.
-         */
-        lv_label_set_text(ui->status_label, synced ? "" : "clock not set");
-        ui->shown_synced = (int)synced;
+}
+
+/*
+ * The bottom line: what is wrong, or nothing.
+ *
+ * "clock not set" matters because until NTP lands the displayed time
+ * is whatever the RTC believed, and an alarm clock that is silently
+ * hours out is worse than one that admits it. "no SD card" matters
+ * because without one every alarm rings on the built-in tone, and
+ * nothing else on this screen would say so.
+ *
+ * Checked on every Timer event, not only the minute: the card is
+ * mounted after this screen is first shown, so a reading taken at
+ * boot would claim a missing card for up to a minute.
+ */
+static void render_status(TimeUi *ui, bool synced)
+{
+    const bool have_card = nn20clock_sd_is_mounted(ui->sd);
+
+    char status[STATUS_SIZE];
+    snprintf(status, sizeof(status), "%s%s%s",
+             synced ? "" : "clock not set",
+             (!synced && !have_card) ? "\n" : "",
+             have_card ? "" : "no SD card found");
+
+    if (!ui->shown_status_valid || strcmp(status, ui->shown_status) != 0) {
+        lv_label_set_text(ui->status_label, status);
+        snprintf(ui->shown_status, sizeof(ui->shown_status), "%s", status);
+        ui->shown_status_valid = true;
     }
 }
 
@@ -443,6 +466,9 @@ static esp_err_t time_ui_show(NN20ClockUiBase *base)
     lv_obj_set_style_text_color(ui->status_label, COLOR_STATUS, LV_PART_MAIN);
     lv_obj_set_style_text_font(ui->status_label, &lv_font_montserrat_28,
                                LV_PART_MAIN);
+    /* Two lines when both apply; centred under each other. */
+    lv_obj_set_style_text_align(ui->status_label, LV_TEXT_ALIGN_CENTER,
+                                LV_PART_MAIN);
     lv_obj_align(ui->status_label, LV_ALIGN_BOTTOM_MID, 0, -40);
 
     /*
@@ -539,11 +565,11 @@ static esp_err_t time_ui_show(NN20ClockUiBase *base)
      * the Timer to report as soon as a screen is shown, so that is a
      * fraction of a second, not a minute.
      *
-     * shown_synced starts at a value the first event cannot match, so
-     * the status line is always written once rather than assumed. */
+     * The status line is always written once by the first event
+     * rather than assumed. */
     ui->shown_time[0] = '\0';
     ui->shown_date[0] = '\0';
-    ui->shown_synced = SYNC_UNKNOWN;
+    ui->shown_status_valid = false;
 
     ESP_LOGI(TAG, "clock face shown");
     return ESP_OK;
@@ -565,7 +591,7 @@ static esp_err_t time_ui_hide(NN20ClockUiBase *base)
  * Design 6 leaves filtering to the subscriber, and this screen is the
  * clearest case of it: a MINUTE event redraws, a TIME_SYNCED event
  * redraws because the whole time may have changed, and everything else
- * - SECOND ticks, alarm events - is ignored. Ignoring is a normal
+ * - SECOND ticks, alarm events - only refreshes the status line. Ignoring is a normal
  * outcome here, not an error.
  */
 static esp_err_t time_ui_timer_event(NN20ClockUiBase *base,
@@ -576,6 +602,18 @@ static esp_err_t time_ui_timer_event(NN20ClockUiBase *base,
     if (ui->time_label == NULL) {
         return ESP_OK;   /* not shown yet */
     }
+    /*
+     * Every event, SECOND included - see render_status(). It only
+     * touches LVGL when the text changes.
+     *
+     * time_synced straight from the payload. An earlier version
+     * inferred it from having seen a TIME_SYNCED event, which meant a
+     * screen built after the sync - opening the alarm settings and
+     * coming back does exactly that - said "clock not set" for the rest
+     * of its life.
+     */
+    render_status(ui, event->payload->time_synced);
+
     if (event->type != NN20CLOCK_TIMER_EVENT_MINUTE &&
         event->type != NN20CLOCK_TIMER_EVENT_TIME_SYNCED) {
         return ESP_OK;
@@ -587,13 +625,7 @@ static esp_err_t time_ui_timer_event(NN20ClockUiBase *base,
         return ESP_FAIL;
     }
 
-    /*
-     * Straight from the payload. An earlier version inferred it from
-     * having seen a TIME_SYNCED event, which meant a screen built after
-     * the sync - opening the alarm settings and coming back does
-     * exactly that - said "clock not set" for the rest of its life.
-     */
-    render(ui, &now, event->payload->time_synced);
+    render(ui, &now);
 
     /*
      * Straight from the payload, like time_synced and for the same
@@ -666,7 +698,8 @@ static const NN20ClockUiVTable TIME_UI_VTABLE = {
 NN20ClockUiBase *nn20clock_time_ui_ctor(nn20_worker_ctx *ui_worker,
                                         NN20ClockManager *manager,
                                         NN20ClockUiCommandFn on_command,
-                                        NN20ClockPlayer *player)
+                                        NN20ClockPlayer *player,
+                                        NN20ClockSd *sd)
 {
     if (ui_worker == NULL) {
         ESP_LOGE(TAG, "no UiWorker");
@@ -692,6 +725,7 @@ NN20ClockUiBase *nn20clock_time_ui_ctor(nn20_worker_ctx *ui_worker,
     }
 
     ui->player = player;
+    ui->sd = sd;
 
     /* No LVGL call has happened here, and none may: this runs on
      * whichever worker asked for the screen. */

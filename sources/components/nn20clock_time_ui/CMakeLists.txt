@@ -12,6 +12,6 @@ idf_component_register(
     SRCS "src/nn20clock_time_ui.c"
     INCLUDE_DIRS "include"
     REQUIRES nn20clock_platform nn20clock_ui nn20clock_timer nn20clock_timefmt
-             nn20clock_player nn20clock_fonts
+             nn20clock_player nn20clock_sd nn20clock_fonts
     PRIV_REQUIRES nn20clock_display
 )

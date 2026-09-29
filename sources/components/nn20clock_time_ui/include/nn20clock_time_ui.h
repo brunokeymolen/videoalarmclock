@@ -41,6 +41,7 @@
 
 #include "nn20clock_platform.h"
 #include "nn20clock_player.h"
+#include "nn20clock_sd.h"
 #include "nn20clock_ui.h"
 
 #ifdef __cplusplus
@@ -53,6 +54,10 @@ extern "C" {
  * the corner while the snooze is pending. Without it the reminder falls
  * back to a bell.
  *
+ * `sd` is borrowed and may be NULL, which reads as "no card". Without a
+ * mounted card the status line says so: every alarm falls back to the
+ * built-in tone, and the screen is the only place that is visible.
+ *
  * Build the clock screen. manager and on_command may be NULL, in which
  * case the screen simply raises no commands - there is nowhere to send
  * them until Milestone 4 gives it a settings screen to open.
@@ -64,7 +69,8 @@ extern "C" {
 NN20ClockUiBase *nn20clock_time_ui_ctor(nn20_worker_ctx *ui_worker,
                                         NN20ClockManager *manager,
                                         NN20ClockUiCommandFn on_command,
-                                        NN20ClockPlayer *player);
+                                        NN20ClockPlayer *player,
+                                        NN20ClockSd *sd);
 
 #ifdef __cplusplus
 }
